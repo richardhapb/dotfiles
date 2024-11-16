@@ -8,8 +8,8 @@ fi
 export DEV="$HOME/Documents/Developer"
 if [[ "$OSTYPE" == "darwin" ]]; then
     export ICLOUD="/Users/richard/Library/Mobile Documents/com~apple~CloudDocs"
+    export IN="$HOME/Documents/Brain/Inbox"
 fi
-export IN="/Users/richard/Documents/Brain/Inbox"
 export NOTES="$HOME/Documents/notes"
 
 export PYENV_ROOT="$HOME/.pyenv"
