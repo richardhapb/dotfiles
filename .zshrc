@@ -17,6 +17,7 @@ if [[ "$OSTYPE" == "darwin" ]]; then
     source $(brew --prefix)/share/powerlevel10k/powerlevel10k.zsh-theme
 elif [[ "$OSTYPE" == "linux-gnu" ]]; then
     source ~/powerlevel10k/powerlevel10k.zsh-theme
+    source .p10k.zsh
     export DEV="$HOME"/dev
 fi
 export NOTES="$HOME/Documents/notes"
