@@ -5,8 +5,10 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
-export DEV="/Users/richard/Documents/Developer"
-export ICLOUD="/Users/richard/Library/Mobile Documents/com~apple~CloudDocs"
+export DEV="$HOME/Documents/Developer"
+if [[ "$OSTYPE" == "darwin" ]]; then
+    export ICLOUD="/Users/richard/Library/Mobile Documents/com~apple~CloudDocs"
+fi
 export IN="/Users/richard/Documents/Brain/Inbox"
 export NOTES="$HOME/Documents/notes"
 
