@@ -13,7 +13,8 @@ if [[ "$OSTYPE" == "darwin" ]]; then
     [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
     source $(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
     source $(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-
+    eval "$(fnm env --use-on-cd)"
+    source $(brew --prefix)/share/powerlevel10k/powerlevel10k.zsh-theme
 else
     export DEV="$HOME"/dev
 fi
@@ -21,7 +22,6 @@ export NOTES="$HOME/Documents/notes"
 
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH:/Users/richard/mongodb/bin"
-eval "$(fnm env --use-on-cd)"
 
 PATH=~/.console-ninja/.bin:$PATH
 export PATH="/opt/homebrew/bin:$PATH"
@@ -34,7 +34,6 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
-source $(brew --prefix)/share/powerlevel10k/powerlevel10k.zsh-theme
 
 alias d="cd $DEV"
 alias va="source .venv/bin/activate"
