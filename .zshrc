@@ -8,6 +8,8 @@ fi
 export DEV="/Users/richard/Documents/Developer"
 export ICLOUD="/Users/richard/Library/Mobile Documents/com~apple~CloudDocs"
 export IN="/Users/richard/Documents/Brain/Inbox"
+export NOTES="$HOME/Documents/notes"
+
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH:/Users/richard/mongodb/bin"
 eval "$(fnm env --use-on-cd)"
@@ -36,6 +38,6 @@ alias ll="ls -la"
 
 # TMUX
 if command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
-    tmux attach-session -t main || tmux new-session -n main
+    tmux attach-session -t main || tmux new-session -s main
 fi
 
