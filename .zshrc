@@ -15,7 +15,8 @@ if [[ "$OSTYPE" == "darwin" ]]; then
     source $(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
     eval "$(fnm env --use-on-cd)"
     source $(brew --prefix)/share/powerlevel10k/powerlevel10k.zsh-theme
-else
+elif [[ "$OSTYPE" == "linux-gnu" ]]; then
+    source ~/powerlevel10k/powerlevel10k.zsh-theme
     export DEV="$HOME"/dev
 fi
 export NOTES="$HOME/Documents/notes"
