@@ -3,10 +3,10 @@
 !.zshrc
 !.tmux.conf
 !.wezterm.lua
+!.gitmodules
 
 !.config
 .config/**
 !.config/nvim
 !.config/nvim/**
-!.gitmodules
 
