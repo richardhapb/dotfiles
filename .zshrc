@@ -42,6 +42,6 @@ alias ll="ls -la"
 
 # TMUX
 if command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
-    tmux attach-session -t main || tmux new-session -s main
+    tmux new-session -A -s main
 fi
 
