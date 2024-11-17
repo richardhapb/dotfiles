@@ -2,6 +2,8 @@
 !.gitignore
 !.zshrc
 !.tmux.conf
+!.tmux_mac.conf
+!.tmux_linux.conf
 !.wezterm.lua
 !.gitmodules
 
