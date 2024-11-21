@@ -2,7 +2,7 @@
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-export NVIM=".config/nvim"
+export NVIM="$HOME/.config/nvim"
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
     source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
@@ -11,6 +11,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     export ICLOUD="/Users/richard/Library/Mobile Documents/com~apple~CloudDocs"
     export IN="$HOME/Documents/Brain/Inbox"
     export DEV="$HOME/Documents/Developer"
+    export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
     # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
     source $(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
     source $(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
@@ -134,14 +135,9 @@ eval "$(pyenv init -)"
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
 
 alias d="cd $DEV"
 alias va="source .venv/bin/activate"
 alias ll="ls -la"
 
-# TMUX
-if command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
-    tmux new-session -A -s main
-fi
 
