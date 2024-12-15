@@ -17,6 +17,17 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     source $(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
     eval "$(fnm env --use-on-cd)"
     source $(brew --prefix)/share/powerlevel10k/powerlevel10k.zsh-theme
+
+    # SPARK
+    export JAVA_HOME=$(brew --prefix java)@17 
+    export PATH=$JAVA_HOME/bin:$PATH
+    export SPARK_HOME=$(brew --prefix apache-spark)/libexec
+    export PATH=$SPARK_HOME/bin:$PATH
+    export PATH=$HOME/.cargo/env:$PATH
+    export CC=$(brew --prefix llvm)/bin/clang
+    export CXX=$(brew --prefix llvm)/bin/clang++
+
+    # alias nvim="/Users/richard/nvim-macos-arm64/bin/nvim"
 elif [[ "$OSTYPE" == "linux-gnu" ]]; then
     source ~/powerlevel10k/powerlevel10k.zsh-theme
     export DEV="$HOME"/dev
@@ -138,6 +149,8 @@ export NVM_DIR="$HOME/.nvm"
 
 alias d="cd $DEV"
 alias va="source .venv/bin/activate"
-alias ll="ls -la"
+alias ls="ls -G"
+alias ll="ls -laG"
 
+nvm use default > /dev/null
 

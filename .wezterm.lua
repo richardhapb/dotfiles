@@ -20,7 +20,7 @@ local function toggle_blur(window)
 end
 
 config.color_scheme = 'GitHub Dark'
-config.font = wezterm.font("MesloLGS NF")
+config.font = wezterm.font("MesloLGL Nerd Font Mono")
 config.window_background_opacity = 0.8
 config.font_size = 14
 config.window_background_image_hsb = {
@@ -28,7 +28,7 @@ config.window_background_image_hsb = {
 }
 config.macos_window_background_blur = 14
 config.colors = {
-    -- Colores de la sintaxis de Bash
+   -- Bash color scheme syntax
     ansi = {"#000000", "#ff5555", "#50fa7b", "#f1fa8c", "#bd93f9", "#ff79c6", "#8be9fd", "#bfbfbf"},
     brights = {"#4d4d4d", "#ff6e67", "#5af78e", "#f4f99d", "#caa9fa", "#ff92d0", "#9aedfe", "#e6e6e6"},
   }
