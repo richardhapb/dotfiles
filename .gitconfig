@@ -1,0 +1,15 @@
+[user]
+	name = richard
+	email = richard@syzlab.com
+[core]
+	autocrlf = input
+[alias]
+    a = add .
+	st = status
+    co = checkout
+    cm = commit -m
+    br = branch
+    df = diff
+    lg = log -p
+    am = ammend --no-edit
+    rs = restore .

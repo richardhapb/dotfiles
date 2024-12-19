@@ -6,6 +6,7 @@
 !.tmux_linux.conf
 !.wezterm.lua
 !.gitmodules
+!.gitconfig
 
 !.config
 .config/**
