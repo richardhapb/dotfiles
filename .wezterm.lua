@@ -4,29 +4,20 @@ local wezterm = require 'wezterm'
 -- This will hold the configuration.
 local config = wezterm.config_builder()
 
--- Toggle blur function
-local with_blur = 14
-local without_blur = 0
-local current_blur = with_blur
+local opacity = 0.8
 
-local function toggle_blur(window)
-    if current_blur == with_blur then
-        current_blur = without_blur
-    else
-        current_blur = with_blur
-    end
+local windows = wezterm.target_triple:find("windows")
+local macos = wezterm.target_triple:find("apple-darwin")
+local linux = wezterm.target_triple:find("linux")
 
-    window:set_config_overrides({macos_window_background_blur = current_blur})
-end
-
+-- General configuration
 config.color_scheme = 'GitHub Dark'
 config.font = wezterm.font("MesloLGL Nerd Font Mono")
-config.window_background_opacity = 0.8
 config.font_size = 14
 config.window_background_image_hsb = {
     brightness = 0.1
 }
-config.macos_window_background_blur = 14
+
 config.colors = {
    -- Bash color scheme syntax
     ansi = {"#000000", "#ff5555", "#50fa7b", "#f1fa8c", "#bd93f9", "#ff79c6", "#8be9fd", "#bfbfbf"},
@@ -63,12 +54,42 @@ config.keys = {
             end
         end)
     },
-    {
+}
+
+if macos then
+   -- Toggle blur function
+   local with_blur = 14
+   local without_blur = 0
+   local current_blur = with_blur
+
+   local function toggle_blur(window)
+       if current_blur == with_blur then
+           current_blur = without_blur
+       else
+           current_blur = with_blur
+       end
+
+       window:set_config_overrides({macos_window_background_blur = current_blur})
+   end
+
+   opacity = 0.8
+   config.macos_window_background_blur = 14
+
+   table.insert(config.keys, {
         key = "b",
         mods = "ALT",
         action = wezterm.action_callback(toggle_blur)
-    }
-}
+    })
+end
 
--- and finally, return the configuration to wezterm
+if linux then
+    opacity = 0.9
+end
+
+if windows then
+    opacity = 0.9
+end
+
+config.window_background_opacity = opacity
+
 return config
