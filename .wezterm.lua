@@ -6,9 +6,9 @@ local config = wezterm.config_builder()
 
 local opacity = 0.8
 
-local windows = wezterm.target_triple:find("windows")
-local macos = wezterm.target_triple:find("apple-darwin")
-local linux = wezterm.target_triple:find("linux")
+local windows = wezterm.target_triple:match("windows")
+local macos = wezterm.target_triple:match("apple")
+local linux = wezterm.target_triple:match("linux")
 
 -- General configuration
 config.color_scheme = 'GitHub Dark'
@@ -72,7 +72,7 @@ if macos then
        window:set_config_overrides({macos_window_background_blur = current_blur})
    end
 
-   opacity = 0.8
+   opacity = 0.4
    config.macos_window_background_blur = 14
 
    table.insert(config.keys, {
@@ -89,7 +89,6 @@ end
 if windows then
     opacity = 0.9
 end
-
 config.window_background_opacity = opacity
 
 return config
