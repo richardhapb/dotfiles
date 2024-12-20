@@ -27,7 +27,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     export CC=$(brew --prefix llvm)/bin/clang
     export CXX=$(brew --prefix llvm)/bin/clang++
 
-    # alias nvim="/Users/richard/nvim-macos-arm64/bin/nvim"
+    alias nvim="/Users/richard/nvim-macos-arm64/bin/nvim"
 elif [[ "$OSTYPE" == "linux-gnu" ]]; then
     source ~/powerlevel10k/powerlevel10k.zsh-theme
     export DEV="$HOME"/dev
