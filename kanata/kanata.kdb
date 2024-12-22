@@ -7,23 +7,23 @@
   tab  q    w    e    r    t    y    u    i    o    p    [    ]    \
   caps a    s    d    f    g    h    j    k    l    ;    '    ret
   lsft z    x    c    v    b    n    m    ,    .    /    rsft
-  lctl lmet lalt           spc            ralt fn rmet rctl
+  lctl lmet lalt         spc            ralt fn rmet rctl
  )
 
 (deflayer base
   grv  1    2    3    4    5    6    7    8    9    0    -    =    bspc
   @lnav  q    w    e    r    t    y    u    i    o    p    [    ]    \
-  @cap a    s    d    f    g    h    j    k    l    ;    '    ret
-  lsft z    x    c    v    b    n    m    ,    .    /    rsft
-  lctl lalt lmet           spc            @spcs fn rmet rctl
+  @cap a    s    d    f    g    h    j    k    l    ;     '   ret
+  lsft z    x    c    v    b    n    m    ,    .    /    @tilde
+  lctl lalt lmet           spc            @rsym fn rmet @cp
 )
 
 (deflayer navigation
-  XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX
-  XX    XX    XX    @es  XX    XX    XX    @us  @is  @os  XX    XX    XX    XX
-  XX  @as  XX    XX    XX    XX    lft   down    up   rght    XX    XX    ret
+  XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    lrld
+  XX    @lnum    XX    @es  XX    XX    XX    @us  @is  @os  XX    XX    XX   (lrld-num 1)
+  XX  @as  XX    XX    XX    XX    lft   down    up   rght    XX    XX    (lrld-num 2)
   @spu     XX    XX    XX    XX    XX    @ns  XX    XX    XX    XX    XX
-  XX     XX   XX    @lnum    XX    XX    XX   XX
+  XX     XX   XX    XX    XX    XX    XX   XX
 )
 
 (deflayer spanishup
@@ -31,23 +31,23 @@
   XX    XX    XX    @ues  XX    XX    XX    @uus  @uis  @uos  XX    XX    XX    XX
   XX  @uas  XX    XX    XX    XX    lft   down    up   rght    XX    XX    ret
   XX     XX    XX    XX    XX    XX    @uns  XX    XX    XX    XX    XX
-  XX     XX   XX    @lnum    XX    XX    XX   XX
+  XX     XX   XX    XX    XX    XX    XX   XX
 )
 
 (deflayer numeric
   XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX
-  XX    XX    XX    XX  XX    XX     -    7  8  9  /   XX    XX    XX
+  XX    XX    XX    XX  XX    XX     -    7  8  9  /   @prc    XX    XX
   XX    XX    XX    XX    XX    XX    kp*   4    5   6    =    XX    ret
-  XX     XX    XX    XX    XX    XX    +  1    2    3 @prc    XX
+  XX     XX    XX    XX    XX    XX    +  1    2    3  0    XX
   XX     XX    XX    XX    XX    XX    XX  XX
 )
 
 (deflayer symbols
-  XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX   XX
-  XX    @exc    @amp     @hash     @usd   XX    @dq    @po  @pc  =  XX    XX    XX    XX
-  XX    \    @prc      @amp    @wa     @int    '   [     ]   +    @dd    XX    XX
-  XX    @lr   kp*     @tt     @und    XX     `   @bo    @bc   -    XX    XX
-  XX     XX    XX    XX    XX    XX    XX   XX
+  XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    @und    +   XX
+  XX    @exc    @and     @hash     @int   XX    XX    XX  @po  @pc   @lt   @gt    /  \
+  XX    @prc      @amp    @wa      @usd    @cin    XX   XX   [  ]      @dd    @dq    =
+  XX    @lr   kp*     @tt     @und    @cex    XX      -   @bo  @bc     `    +
+  XX     XX    XX    @chw    XX    XX    XX   XX
 )
 
 (defvar
@@ -74,6 +74,9 @@
   uos   (macro A-e S-o)
   uus   (macro A-e S-u)
 
+  ;; change window
+  chw	(macro M-tab)
+
   ;; symbols
   po S-9
   pc S-0
@@ -90,26 +93,36 @@
   amp S-7
   ast kp*
   min kp-
-  und S-kp-
+  und S--
   eq kp=
   pl kp+
   bs \
   fs kp/
-  int S-kp/
+  int S-/
   lr S-\
   usd S-4
   dq S-'
   sq '
   tq `
   dd S-;
+  cin A-S-/
+  cex A-1
+  lt S-,
+  gt S-.
+  til A-e
+
+  cp (tap-dance 200 (M-c M-v))
+
+  tilde (tap-hold $tt $ht @til rsft)
 
   ;; tap for esc, hold for left control in caps key
   cap  (tap-hold $tt $ht esc lctl)
 
   sym (layer-while-held symbols)
 
-  ;; tap for spc, hold for symbols
-  spcs (tap-hold $tt $ht @usd @sym)
+  ;; symbols layer
+  lsym (tap-hold $tt $ht spc @sym)
+  rsym (tap-hold $tt $ht ret @sym)
 
   ;; Activate the arrows like Vim
   nav  (layer-while-held navigation)
@@ -122,3 +135,4 @@
   ;; Enable numeric layer
   lnum (layer-while-held numeric)
 )
+

@@ -15,4 +15,5 @@
 !kanata
 kanata/**
 !kanata/kanata.kdb
+!kanata/kanata_mac.kdb
 
