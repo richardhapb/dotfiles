@@ -26,6 +26,8 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     export PATH=$HOME/.cargo/env:$PATH
     export CC=$(brew --prefix llvm)/bin/clang
     export CXX=$(brew --prefix llvm)/bin/clang++
+    export PATH=$PATH:"/Users/richard/texpresso/build"
+    export PATH=$PATH:"/Users/richard/kanata"
 
     alias nvim="/Users/richard/nvim-macos-arm64/bin/nvim"
 elif [[ "$OSTYPE" == "linux-gnu" ]]; then

@@ -12,4 +12,7 @@
 .config/**
 !.config/nvim
 !.config/nvim/**
+!kanata
+kanata/**
+!kanata/kanata.kdb
 

@@ -17,6 +17,7 @@ config.font_size = 14
 config.window_background_image_hsb = {
    brightness = 0.1
 }
+config.use_ime = true
 
 config.colors = {
    -- Bash color scheme syntax
