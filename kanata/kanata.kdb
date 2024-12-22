@@ -21,9 +21,9 @@
 (deflayer navigation
   XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    lrld
   XX    @lnum    XX    @es  XX    XX    XX    @us  @is  @os  XX    XX    XX   (lrld-num 1)
-  XX  @as  XX    XX    XX    XX    lft   down    up   rght    XX    XX    (lrld-num 2)
-  @spu     XX    XX    XX    XX    XX    @ns  XX    XX    XX    XX    XX
-  XX     XX   XX    XX    XX    XX    XX   XX
+  @spu  @as  XX    XX    XX    XX    lft   down    up   rght    XX    XX    (lrld-num 2)
+  _     XX    XX    XX    XX    XX    @ns  XX    XX    XX    XX    XX
+  _     _   _    XX    _    _    _   _
 )
 
 (deflayer spanishup

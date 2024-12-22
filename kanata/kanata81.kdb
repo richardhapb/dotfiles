@@ -24,9 +24,9 @@
   XX  XX   XX   XX   XX   XX   XX   XX   XX  XX   XX  XX  XX  XX XX XX
   XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    lrld XX
   XX    @lnum    XX    @es  XX    XX    XX    @us  @is  @os  XX    XX    XX    XX
-  XX  @as  XX    XX    XX    XX    lft   down    up   rght    XX    XX    ret XX
-  @spu     XX    XX    XX    XX    XX    @ns  XX    XX    XX    XX    XX  XX  XX
-  XX     XX   XX    XX    XX    XX    XX   XX    XX   XX
+  @spu  @as  XX    XX    XX    XX    lft   down    up   rght    XX    XX    ret XX
+  _     XX    XX    XX    XX    XX    @ns  XX    XX    XX    XX    XX  XX  XX
+  _     _   _    XX    _    _    _   _    _   _
 )
 
 (deflayer spanishup
