@@ -30,6 +30,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     export PATH=$PATH:"/Users/richard/kanata"
 
     alias nvim="/Users/richard/nvim-macos-arm64/bin/nvim"
+    alias vps="ssh ubuntu@3.145.58.151"
 elif [[ "$OSTYPE" == "linux-gnu" ]]; then
     source ~/powerlevel10k/powerlevel10k.zsh-theme
     export DEV="$HOME"/dev
