@@ -8,7 +8,7 @@
   tab  q    w    e    r    t    y    u    i    o    p    [    ]    \  end
   caps a    s    d    f    g    h    j    k    l    ;    '    ret  pgup
   lsft z    x    c    v    b    n    m    ,    .    /    rsft  up pgdn
-  lctl lmet lalt           spc            ralt fn rctl lft down rght
+  lctl lmet lalt           spc            ralt  rctl lft down rght
  )
 
 (deflayer base
@@ -17,16 +17,16 @@
   @lnav  q    w    e    r    t    y    u    i    o    p    [    ]    \  end
   @cap a    s    d    f    g    h    j    k    l    ;    '    ret  pgup
   lsft z    x    c    v    b    n    m    ,    .    /    rsft  up pgdn
-  lctl lmet lalt           spc            @rsym fn rctl lft down rght
+  lctl lmet lalt           spc            @rsym rctl lft down rght
 )
 
 (deflayer navigation
   XX  XX   XX   XX   XX   XX   XX   XX   XX  XX   XX  XX  XX  XX XX XX
   XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    lrld XX
-  XX    @lnum    XX    @es  XX    XX    XX    @us  @is  @os  XX    XX    XX    XX
+  XX    @lnum    XX    @es  XX    XX    XX    @us  @is  @os  XX    XX    XX    XX  XX
   @spu  @as  XX    XX    XX    XX    lft   down    up   rght    XX    XX    ret XX
   _     XX    XX    XX    XX    XX    @ns  XX    XX    XX    XX    XX  XX  XX
-  _     _   _    XX    _    _    _   _    _   _
+  _     _   _    XX    _    _    _   _    _ 
 )
 
 (deflayer spanishup
@@ -35,7 +35,7 @@
   XX    XX    XX    @ues  XX    XX    XX    @uus  @uis  @uos  XX    XX    XX    XX XX
   XX  @uas  XX    XX    XX    XX    lft   down    up   rght    XX    XX    ret XX
   XX     XX    XX    XX    XX    XX    @uns  XX    XX    XX    XX    XX  XX  XX
-  XX     XX   XX    XX    XX    XX    XX   XX  XX  XX
+  XX     XX   XX    XX    XX    XX    XX   XX  XX
 )
 
 (deflayer numeric
@@ -44,7 +44,7 @@
   XX    XX    XX    XX  XX    XX     -    7  8  9  /   @prc    XX    XX   XX
   XX    XX    XX    XX    XX    XX    kp*   4    5   6    =    XX    ret  XX
   XX     XX    XX    XX    XX    XX    +  1    2    3  0    XX  XX  XX
-  XX     XX    XX    XX    XX    XX    XX  XX   XX   XX
+  XX     XX    XX    XX    XX    XX    XX  XX   XX
 )
 
 (deflayer symbols
@@ -53,7 +53,7 @@
   XX    @exc    @and     @hash     @int   XX    XX    XX  @po  @pc   @lt   @gt    /  \  XX
   XX    @prc      @amp    @wa      @usd    @cin    XX   XX   [  ]      @dd    @dq    =  XX
   XX    @lr   kp*     @tt     @und    @cex    XX      -   @bo  @bc     `    +  XX  XX
-  XX     XX    XX    @chw    XX    XX    XX   XX  XX  XX
+  XX     XX    XX    @chw    XX    XX    XX   XX   XX
 )
 
 (defvar
@@ -122,7 +122,7 @@
   tilde (tap-hold $tt $ht @til rsft)
 
   ;; tap for esc, hold for left control in caps key
-  cap  (tap-hold $tt $ht esc lctl)
+  cap  (tap-hold $tt $ht esc lalt)
 
   sym (layer-while-held symbols)
 
