@@ -17,7 +17,7 @@
   @lnav  q    w    e    r    t    y    u    i    o    p    [    ]    \  end
   @cap a    s    d    f    g    h    j    k    l    ;    '    ret  pgup
   lsft z    x    c    v    b    n    m    ,    .    /    rsft  up pgdn
-  lctl lmet lalt           spc            @rsym rctl lft down rght
+  lctl lmet lalt           spc            @rsym ralt lft down rght
 )
 
 (deflayer navigation
@@ -66,19 +66,19 @@
 (defalias
 
   ;; Spanish keyboard characters
-  ns   (macro A-n n)
-  as   (macro A-e a)
-  es   (macro A-e e)
-  is   (macro A-e i)
-  os   (macro A-e o)
-  us   (macro A-e u)
+  ns   (macro ralt S-grv n)
+  as   (macro ralt ' a)
+  es   (macro ralt ' e)
+  is   (macro ralt ' i)
+  os   (macro ralt ' o)
+  us   (macro ralt ' u)
 
-  uns   (macro A-n S-n)
-  uas   (macro A-e S-a)
-  ues   (macro A-e S-e)
-  uis   (macro A-e S-i)
-  uos   (macro A-e S-o)
-  uus   (macro A-e S-u)
+  uns   (macro ralt S-grv S-n)
+  uas   (macro ralt ' S-a)
+  ues   (macro ralt ' S-e)
+  uis   (macro ralt ' S-i)
+  uos   (macro ralt ' S-o)
+  uus   (macro ralt ' S-u)
 
   ;; change window
   chw	(macro M-tab)
