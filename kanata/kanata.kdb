@@ -15,12 +15,21 @@
   @lnav  q    w    e    r    t    y    u    i    o    p    [    ]    \
   @cap a    s    d    f    g    h    j    k    l    ;     '   ret
   lsft z    x    c    v    b    n    m    ,    .    /    rsft
-  lctl lalt lmet           spc            @rsym fn rmet @cp
+  @lfun lalt lmet           spc            @rsym fn rmet @cp
 )
+
+(deflayer functions
+  XX    brdwn    brup    bldn    blup    XX    XX    prev    pp    next    mute    vold    volu    XX
+  XX    XX    XX    XX  XX    XX    XX    XX  XX  XX  XX    XX    XX    XX
+  XX    XX  XX    XX    XX    XX    XX   XX    XX   XX    XX    XX    XX
+  fn     XX    XX    XX    XX    XX    XX  XX    XX    XX    XX    XX
+  XX     XX   XX    e    XX    XX    XX   XX
+)
+
 
 (deflayer navigation
   XX    f1    f2    f3    f4    f5    f6    f7    f8    f9    f10    f11    f12    lrld
-  XX    @lnum    XX    @es  XX    XX    XX    @us  @is  @os  XX    XX    XX   (lrld-num 1)
+  XX    @lnum    XX    @es  XX    XX    XX    @us  @is  @os  XX    pgup    pgdn   (lrld-num 1)
   @spu  @as  XX    XX    XX    XX    lft   down    up   rght    XX    XX    (lrld-num 2)
   _     XX    XX    XX    XX    XX    @ns  XX    XX    XX    XX    XX
   _     _   _    XX    _    _    _   _
@@ -134,5 +143,8 @@
 
   ;; Enable numeric layer
   lnum (layer-while-held numeric)
+
+  fun (layer-while-held functions)
+  lfun (tap-hold $tt $ht fn @fun)
 )
 

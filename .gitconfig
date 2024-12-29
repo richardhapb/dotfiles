@@ -3,6 +3,8 @@
 	email = richard@syzlab.com
 [core]
 	autocrlf = input
+[push]
+    default = current
 [alias]
     a = add .
 	st = status

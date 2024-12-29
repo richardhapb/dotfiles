@@ -23,7 +23,7 @@
 (deflayer navigation
   XX  XX   XX   XX   XX   XX   XX   XX   XX   XX   XX  XX  XX 
   XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    lrld
-  XX    @lnum    XX    @es  XX    XX    XX    @us  @is  @os  XX    XX    XX   (lrld-num 2)
+  XX    @lnum    XX    @es  XX    XX    XX    @us  @is  @os  XX    pgup    pgdn   (lrld-num 2)
   @spu  @as  XX    XX    XX    XX    lft   down    up   rght    XX    XX    (lrld-num 1)
   _  grv  XX   XX    XX    XX    XX     @ns  XX    XX    XX    XX XX
   _ _     _   _    XX    _    _    _   _  _  _
