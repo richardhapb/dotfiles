@@ -157,3 +157,6 @@ alias ll="ls -laG"
 
 nvm use default > /dev/null
 
+export EDITOR=nvim
+export VISUAL=nvim
+
