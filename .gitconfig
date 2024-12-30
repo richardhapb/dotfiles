@@ -16,3 +16,5 @@
     am = ammend --no-edit
     rs = restore .
     tree = log --graph --pretty=oneline --abbrev-commit
+[init]
+	defaultBranch = main
