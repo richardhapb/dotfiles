@@ -53,10 +53,10 @@
 
 (deflayer symbols
   XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    XX    @und    +   XX
-  XX    @exc    @and     @hash     @int   XX    XX    XX  @po  @pc   @lt   @gt    /  \
+  @chw    @exc    @and     @hash     @int   XX    XX    XX  @po  @pc   @lt   @gt    /  \
   XX    @prc      @amp    @wa      @usd    @cin    XX   XX   [  ]      @dd    @dq    =
   XX    @lr   kp*     @tt     @und    @cex    XX      -   @bo  @bc     `    +
-  XX     XX    XX    @chw    XX    XX    XX   XX
+  XX     XX    XX    XX    XX    XX    XX   XX
 )
 
 (defvar
