@@ -1,13 +1,13 @@
 [user]
-	name = richard
-	email = richard@syzlab.com
+    name = richardhapb
+    email = richard.hapb@icloud.com
 [core]
-	autocrlf = input
+    autocrlf = input
 [push]
     default = current
 [alias]
     a = add .
-	st = status
+    st = status
     co = checkout
     cm = commit -m
     br = branch
@@ -17,4 +17,7 @@
     rs = restore .
     tree = log --graph --pretty=oneline --abbrev-commit
 [init]
-	defaultBranch = main
+    defaultBranch = main
+[includeif "gitdir:~/dev/"]
+    path = ~/configs/.gitconfig-work
+
