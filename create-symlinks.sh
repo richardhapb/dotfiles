@@ -14,3 +14,12 @@ for file in .*; do
         fi
     fi
 done
+
+
+if [ -d "~/migrate-repo.sh" ]; then
+    echo "Moving migrate-repo.sh to configs folder..."
+    mv ~/migrate-repo.sh ~/configs/
+fi
+
+echo "Symlinks created successfully!"
+
