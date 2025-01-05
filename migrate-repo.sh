@@ -27,3 +27,6 @@ cd configs
 
 echo "Migration completed!"
 
+echo "The last step is going to nvim config folder, enter in .git/config and remove the line 'worktree = ../../..'"
+echo "Then, run 'git pull' to update the repository"
+
