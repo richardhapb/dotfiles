@@ -11,7 +11,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     export ICLOUD="/Users/richard/Library/Mobile Documents/com~apple~CloudDocs"
     export IN="$HOME/Documents/Brain/Inbox"
     export DEV="$HOME/Documents/Developer"
-    export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
+    export NOTES="$HOME/Documents/notes"
     # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
     source $(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
     source $(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
@@ -28,6 +28,9 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     export CXX=$(brew --prefix llvm)/bin/clang++
     export PATH=$PATH:"/Users/richard/texpresso/build"
     export PATH=$PATH:"/Users/richard/kanata"
+    export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH:/Users/richard/mongodb/bin"
+    export PATH="/opt/homebrew/bin:$PATH"
+    export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
 
     alias nvim="/Users/richard/nvim-macos-arm64/bin/nvim"
     alias vps="ssh ubuntu@3.145.58.151"
@@ -133,14 +136,14 @@ elif [[ "$OSTYPE" == "linux-gnu" ]]; then
     fi
 
     . "$HOME/.cargo/env"
+
+    export DEV="$HOME/dev"
+    export NOTES="$HOME/notes"
 fi
-export NOTES="$HOME/Documents/notes"
 
 export PYENV_ROOT="$HOME/.pyenv"
-export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH:/Users/richard/mongodb/bin"
 
 PATH=~/.console-ninja/.bin:$PATH
-export PATH="/opt/homebrew/bin:$PATH"
 
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
