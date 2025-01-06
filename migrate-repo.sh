@@ -19,7 +19,7 @@ if [ ! -d configs ]; then
 fi
 
 echo "Moving files to configs folder..."
-mv .zshrc .tmux.conf .tmux_mac.conf .tmux_linux.conf .wezterm.lua .gitconfig .gitignore create-symlinks.sh install-linux-font.sh configs/
+mv .zshrc .tmux.conf .tmux_mac.conf .tmux_linux.conf .wezterm.lua .gitconfig .gitconfig-work .gitignore create-symlinks.sh install-linux-font.sh configs/
 mv .git configs/.git
 
 cd configs
