@@ -51,10 +51,10 @@ if macos then
    config.macos_window_background_blur = 14
 
    table.insert(config.keys, {
-         key = "b",
-         mods = "ALT",
-         action = wezterm.action_callback(toggle_blur)
-      }
+      key = "b",
+      mods = "ALT",
+      action = wezterm.action_callback(toggle_blur)
+   }
    )
    table.insert(config.keys,
       {
@@ -66,7 +66,7 @@ end
 
 -- General configuration
 config.color_scheme = 'GitHub Dark'
-config.font = wezterm.font("MesloLGL Nerd Font Mono")
+config.font = wezterm.font 'JetBrains Mono'
 config.font_size = 14
 config.window_background_image_hsb = {
    brightness = 0.1
@@ -84,6 +84,15 @@ config.hide_tab_bar_if_only_one_tab = true
 config.window_background_opacity = opacity
 
 local current_opacity = opacity
+
+local mux = wezterm.mux
+
+wezterm.on('gui-startup', function(_)
+   local _, _, window = mux.spawn_window({})
+   local gui_window = window:gui_window();
+   gui_window:maximize()
+   gui_window:set_config_overrides({ window_background_opacity = opacity })
+end)
 
 local keys = {
    {
@@ -112,15 +121,19 @@ local keys = {
          end
       end)
    },
-   { key = "z", mods = "ALT", action = wezterm.action_callback(function(window)
-      if current_opacity ~= 1 then
-         current_opacity = 1
-      else
-         current_opacity = opacity
-      end
+   {
+      key = "z",
+      mods = "ALT",
+      action = wezterm.action_callback(function(window)
+         if current_opacity ~= 1 then
+            current_opacity = 1
+         else
+            current_opacity = opacity
+         end
 
-      window:set_config_overrides({ window_background_opacity = current_opacity })
-   end) }
+         window:set_config_overrides({ window_background_opacity = current_opacity })
+      end)
+   }
 }
 
 for _, key in ipairs(keys) do

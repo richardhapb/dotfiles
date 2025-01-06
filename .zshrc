@@ -163,3 +163,8 @@ nvm use default > /dev/null
 export EDITOR=nvim
 export VISUAL=nvim
 
+typeset -g POWERLEVEL9K_INSTANT_PROMPT=off
+
+if command -v tmux &> /dev/null && [ -n "$PS1" ] && [[ ! "$TERM" =~ screen ]] && [[ ! "$TERM" =~ tmux ]] && [ -z "$TMUX" ]; then
+  exec tmux
+fi
