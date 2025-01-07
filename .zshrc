@@ -2,7 +2,6 @@
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-export NVIM="$HOME/.config/nvim"
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
     source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
@@ -62,7 +61,7 @@ elif [[ "$OSTYPE" == "linux-gnu" ]]; then
     #shopt -s globstar
 
     # make less more friendly for non-text input files, see lesspipe(1)
-    #[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+    [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
 
     # set variable identifying the chroot you work in (used in the prompt below)
     if [ -z "${debian_chroot:-}" ] && [ -r /etc/debian_chroot ]; then
@@ -91,7 +90,7 @@ elif [[ "$OSTYPE" == "linux-gnu" ]]; then
     fi
 
     if [ "$color_prompt" = yes ]; then
-        PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w \$\[\033[00m\] '
+        PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
     else
         PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
     fi
@@ -122,9 +121,13 @@ elif [[ "$OSTYPE" == "linux-gnu" ]]; then
     #export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
 
     # some more ls aliases
-    #alias ll='ls -l'
-    #alias la='ls -A'
-    #alias l='ls -CF'
+    alias ll='ls -alF'
+    alias la='ls -A'
+    alias l='ls -CF'
+
+    # Add an "alert" alias for long running commands.  Use like so:
+    #   sleep 10; alert
+    alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
 
     # Alias definitions.
     # You may want to put all your additions into a separate file like
@@ -135,18 +138,24 @@ elif [[ "$OSTYPE" == "linux-gnu" ]]; then
         . ~/.bash_aliases
     fi
 
-    . "$HOME/.cargo/env"
+    # . "$HOME/.cargo/env"
+
+    alias wezterm='flatpak run org.wezfurlong.wezterm'
+    export JAVA_HOME=$(readlink -f /usr/bin/javac | sed "s:/bin/javac::")
+
+    export PATH=$PATH:/home/richard/pycharm-2024.3/bin
+    export PATH=$PATH:/usr/lib/snap
+    export PATH=$PATH:/opt/nvim-linux64/bin
+    export PATH=$PATH:/home/richard/.local/bin
 
     export DEV="$HOME/dev"
     export NOTES="$HOME/notes"
 fi
 
-export PYENV_ROOT="$HOME/.pyenv"
-
 PATH=~/.console-ninja/.bin:$PATH
 
 export PYENV_ROOT="$HOME/.pyenv"
-[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
 
 export NVM_DIR="$HOME/.nvm"
@@ -154,14 +163,19 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
 alias d="cd $DEV"
+alias cdd='cd ~/dev'
 alias va="source .venv/bin/activate"
 alias ls="ls -G"
 alias ll="ls -laG"
+alias cdn='cd ~/.config/nvim'
+alias nvim='~/nvim/bin/nvim'
 
 nvm use default > /dev/null
 
 export EDITOR=nvim
 export VISUAL=nvim
+
+export NVIM="$HOME/.config/nvim"
 
 typeset -g POWERLEVEL9K_INSTANT_PROMPT=off
 
