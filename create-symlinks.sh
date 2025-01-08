@@ -4,7 +4,7 @@
 # in the home directory, and skip if the file already exists
 # includes hidden files
 
-for file in .*; do
+for file in .* *; do
     if [ -f "$file" ]; then
         if [ -e "$HOME/$file" ]; then
         echo "Skipping $file: file already exists in $HOME"
@@ -15,11 +15,13 @@ for file in .*; do
     fi
 done
 
-
-if [ -f ~/migrate-repo.sh ]; then
-    echo "Moving migrate-repo.sh to configs folder..."
-    mv ~/migrate-repo.sh ~/configs/
-fi
+if [ -f "$HOME/configs/nvim-update.sh" ]; then
+    if [ -e "$HOME/nvim-update.sh" ]; then
+        echo "Skipping nvim-update.sh: file already exists in $HOME"
+    else
+        ln -s "$HOME/configs/nvim-update.sh" "$HOME/nvim-update.sh"
+        echo "Created symlink to nvim-update.sh in $HOME"
+    fi
 
 echo "Symlinks created successfully!"
 
