@@ -30,9 +30,6 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH:/Users/richard/mongodb/bin"
     export PATH="/opt/homebrew/bin:$PATH"
     export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
-
-    alias nvim="/Users/richard/nvim-macos-arm64/bin/nvim"
-    alias vps="ssh ubuntu@3.145.58.151"
 elif [[ "$OSTYPE" == "linux-gnu" ]]; then
     source ~/powerlevel10k/powerlevel10k.zsh-theme
     export DEV="$HOME"/dev
@@ -169,13 +166,14 @@ alias ls="ls -G"
 alias ll="ls -laG"
 alias cdn='cd ~/.config/nvim'
 alias nvim='~/nvim/bin/nvim'
+alias vps="ssh ubuntu@3.145.58.151"
 
 nvm use default > /dev/null
 
-export EDITOR=nvim
-export VISUAL=nvim
-
 export NVIM="$HOME/.config/nvim"
+
+export EDITOR='~/nvim/bin/nvim'
+export VISUAL='~/nvim/bin/nvim'
 
 typeset -g POWERLEVEL9K_INSTANT_PROMPT=off
 
