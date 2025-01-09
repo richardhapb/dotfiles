@@ -192,6 +192,8 @@ alias gsw='git switch'
 alias gt='git tree'
 alias gr='git rebase'
 alias grf='git reflog'
+alias gcl='git clone'
+alias gf='git fetch'
 
 
 nvm use default > /dev/null
