@@ -16,6 +16,8 @@
     am = ammend --no-edit
     rs = restore .
     tree = log --graph --pretty=oneline --abbrev-commit
+    pod = remote prune origin --dry-run
+    pof = remote prune origin
 [init]
     defaultBranch = main
 [includeif "gitdir:~/dev/"]
