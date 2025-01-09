@@ -190,6 +190,8 @@ alias gdw='git diff --word-diff'
 alias gdc='git diff --cached'
 alias gsw='git switch'
 alias gt='git tree'
+alias gr='git rebase'
+alias grf='git reflog'
 
 
 nvm use default > /dev/null
