@@ -168,6 +168,30 @@ alias cdn='cd ~/.config/nvim'
 alias nvim='~/nvim/bin/nvim'
 alias vps="ssh ubuntu@3.145.58.151"
 
+# Git
+alias g='git'
+alias gs='git status'
+alias ga='git add'
+alias gc='git commit'
+alias gcm='git commit -m'
+alias gca='git commit --amend'
+alias gp='git push'
+alias gpl='git pull'
+alias gco='git checkout'
+alias gb='git branch'
+alias gba='git branch -a'
+alias gbd='git branch -d'
+alias gbm='git branch -m'
+alias gbs='git branch --show-current'
+alias gl='git log'
+alias gd='git diff'
+alias gds='git diff --staged'
+alias gdw='git diff --word-diff'
+alias gdc='git diff --cached'
+alias gsw='git switch'
+alias gt='git tree'
+
+
 nvm use default > /dev/null
 
 export NVIM="$HOME/.config/nvim"
