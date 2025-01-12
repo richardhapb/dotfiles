@@ -182,6 +182,7 @@ alias gb='git branch'
 alias gba='git branch -a'
 alias gbd='git branch -d'
 alias gbm='git branch -m'
+alias gbu='git branch -u origin/$(git rev-parse --abbrev-ref HEAD)'
 alias gbs='git branch --show-current'
 alias gl='git log'
 alias gd='git diff'
@@ -190,11 +191,14 @@ alias gdw='git diff --word-diff'
 alias gdc='git diff --cached'
 alias gsw='git switch'
 alias gt='git tree'
-alias gr='git rebase'
+alias grb='git rebase'
+alias grs='git restore'
 alias grf='git reflog'
 alias gcl='git clone'
 alias gf='git fetch'
+alias gm='git merge'
 
+alias jupyter='$HOME/.config/nvim/.venv/bin/jupyter'
 
 nvm use default > /dev/null
 
