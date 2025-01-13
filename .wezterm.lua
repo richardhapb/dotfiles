@@ -67,7 +67,7 @@ end
 -- General configuration
 config.color_scheme = 'GitHub Dark'
 config.font = wezterm.font 'JetBrains Mono'
-config.font_size = 14
+config.font_size = 13
 config.window_background_image_hsb = {
    brightness = 0.1
 }
