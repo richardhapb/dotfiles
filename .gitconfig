@@ -22,4 +22,6 @@
     defaultBranch = main
 [includeif "gitdir:~/dev/"]
     path = ~/configs/.gitconfig-work
+[rerere]
+    enabled = true
 

@@ -1,3 +1,5 @@
 [user]
     name = richardhapb
     email = richard@syzlab.com
+[core]
+    autocrlf = false
