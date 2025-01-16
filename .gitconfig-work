@@ -1,5 +1,7 @@
 [user]
-    name = richardhapb
-    email = richard@syzlab.com
+	name = SyzRichard
+	email = richard@syzlab.com
 [core]
-    autocrlf = false
+	autocrlf = false
+[merge]
+	renormalize = true
