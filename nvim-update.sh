@@ -2,6 +2,9 @@
 name=nvim.tar.gz
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+		if ! dpkg -l | grep glibc ; then
+				sudo apt install glibc-source -y
+		fi
     wget https://github.com/neovim/neovim/releases/download/nightly/nvim-linux64.tar.gz -O ~/$name
     folder_name=nvim-linux64
 elif [[ "$OSTYPE" == "darwin"* ]]; then
