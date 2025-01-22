@@ -24,18 +24,22 @@ if macos then
    local with_blur = 14
    local without_blur = 0
    local current_blur = with_blur
+   local hard_opacity = 0.9
+   local soft_opacity = 0.4
 
    local function toggle_blur(window)
       if current_blur == with_blur then
          current_blur = without_blur
+         opacity = soft_opacity
       else
          current_blur = with_blur
+         opacity = hard_opacity
       end
 
-      window:set_config_overrides({ macos_window_background_blur = current_blur })
+      window:set_config_overrides({ macos_window_background_blur = current_blur, window_background_opacity = opacity })
    end
 
-   opacity = 0.4
+   opacity = hard_opacity
    local current_opacity = opacity
 
    local function toggle_opacity(window)
@@ -66,7 +70,7 @@ end
 
 -- General configuration
 config.color_scheme = 'GitHub Dark'
-config.font = wezterm.font 'JetBrains Mono'
+config.font = wezterm.font ('JetBrains Mono', {weight="DemiBold"})
 config.font_size = 13
 config.window_background_image_hsb = {
    brightness = 0.1
@@ -74,6 +78,7 @@ config.window_background_image_hsb = {
 config.use_ime = true
 
 config.colors = {
+   background = "#0b0e14",
    -- Bash color scheme syntax
    ansi = { "#000000", "#ff5555", "#50fa7b", "#f1fa8c", "#bd93f9", "#ff79c6", "#8be9fd", "#bfbfbf" },
    brights = { "#4d4d4d", "#ff6e67", "#5af78e", "#f4f99d", "#caa9fa", "#ff92d0", "#9aedfe", "#e6e6e6" },
