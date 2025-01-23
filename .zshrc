@@ -143,13 +143,12 @@ elif [[ "$OSTYPE" == "linux-gnu" ]]; then
     export PATH=$PATH:/home/richard/pycharm-2024.3/bin
     export PATH=$PATH:/usr/lib/snap
     export PATH=$PATH:/opt/nvim-linux64/bin
-    export PATH=$PATH:/home/richard/.local/bin
 
     export DEV="$HOME/dev"
     export NOTES="$HOME/notes"
 fi
 
-PATH=~/.console-ninja/.bin:$PATH
+export PATH=$PATH:$HOME/.local/bin
 
 export PYENV_ROOT="$HOME/.pyenv"
 command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
@@ -212,3 +211,4 @@ typeset -g POWERLEVEL9K_INSTANT_PROMPT=off
 if command -v tmux &> /dev/null && [ -n "$PS1" ] && [[ ! "$TERM" =~ screen ]] && [[ ! "$TERM" =~ tmux ]] && [ -z "$TMUX" ]; then
   exec tmux
 fi
+
