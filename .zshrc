@@ -9,7 +9,8 @@ fi
 if [[ "$OSTYPE" == "darwin"* ]]; then
     export ICLOUD="/Users/richard/Library/Mobile Documents/com~apple~CloudDocs"
     export IN="$HOME/Documents/Brain/Inbox"
-    export DEV="$HOME/Documents/Developer"
+    export DEV0="$HOME/Documents/Developer"
+    export DEV="$HOME/Documents/dev"
     export NOTES="$HOME/Documents/notes"
     # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
     source $(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
@@ -30,6 +31,8 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH:/Users/richard/mongodb/bin"
     export PATH="/opt/homebrew/bin:$PATH"
     export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
+
+    export SNVIM="$DEV/cont/neovim"
 elif [[ "$OSTYPE" == "linux-gnu" ]]; then
     source ~/powerlevel10k/powerlevel10k.zsh-theme
     export DEV="$HOME"/dev
@@ -146,6 +149,7 @@ elif [[ "$OSTYPE" == "linux-gnu" ]]; then
 
     export DEV="$HOME/dev"
     export NOTES="$HOME/notes"
+    export SNVIM="$HOME/ddev/neovim"
 fi
 
 export PATH=$PATH:$HOME/.local/bin
