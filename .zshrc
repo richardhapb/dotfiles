@@ -33,6 +33,9 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
 
     export SNVIM="$DEV/cont/neovim"
+    export PKG_CONFIG_PATH=$(brew --prefix zathura)/lib/pkgconfig:$PKG_CONFIG_PATH
+
+    alias sed='gsed'
 elif [[ "$OSTYPE" == "linux-gnu" ]]; then
     source ~/powerlevel10k/powerlevel10k.zsh-theme
     export DEV="$HOME"/dev
@@ -51,10 +54,6 @@ elif [[ "$OSTYPE" == "linux-gnu" ]]; then
     # don't put duplicate lines or lines starting with space in the history.
     # See bash(1) for more options
     HISTCONTROL=ignoreboth
-
-    # for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
-    HISTSIZE=1000
-    HISTFILESIZE=2000
 
     # If set, the pattern "**" used in a pathname expansion context will
     # match all files and zero or more directories and subdirectories.
@@ -153,6 +152,7 @@ elif [[ "$OSTYPE" == "linux-gnu" ]]; then
 fi
 
 export PATH=$PATH:$HOME/.local/bin
+export PATH=$PATH:$HOME/.local/share/nvim/mason/bin
 
 export PYENV_ROOT="$HOME/.pyenv"
 command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
@@ -200,6 +200,7 @@ alias grf='git reflog'
 alias gcl='git clone'
 alias gf='git fetch'
 alias gm='git merge'
+alias hist='eval $(history 0 | sed -E "s/\s*[0-9]+\s+//" | sort | uniq | fzf)'
 
 alias jupyter='$HOME/.config/nvim/.venv/bin/jupyter'
 
@@ -209,6 +210,13 @@ export NVIM="$HOME/.config/nvim"
 
 export EDITOR='~/nvim/bin/nvim'
 export VISUAL='~/nvim/bin/nvim'
+
+. "$HOME/.cargo/env"
+
+export HISTSIZE=100000
+export HISTFILESIZE=100000
+export HISTCONTROL=ignoredups:ignorespace  # Avoid duplicate entries
+
 
 typeset -g POWERLEVEL9K_INSTANT_PROMPT=off
 

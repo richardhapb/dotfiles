@@ -21,7 +21,7 @@ end
 
 if macos then
    -- Toggle blur function
-   local with_blur = 14
+   local with_blur = 20
    local without_blur = 0
    local current_blur = with_blur
    local hard_opacity = 0.9

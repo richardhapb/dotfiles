@@ -1,6 +1,6 @@
 #!/bin/sh
 
-languages=$(echo "lua python js bash css html" | tr ' ' '\n')
+languages=$(echo "lua python rust js bash css html" | tr ' ' '\n')
 commands=$(echo "curl git find sed awk grep fd fzf tr tar less tmux nvim vim" | tr ' ' '\n')
 
 selected=$(echo "$languages\n$commands" | fzf)
