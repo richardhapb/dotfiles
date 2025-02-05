@@ -200,16 +200,16 @@ alias grf='git reflog'
 alias gcl='git clone'
 alias gf='git fetch'
 alias gm='git merge'
-alias hist='eval $(history 0 | sed -E "s/\s*[0-9]+\s+//" | sort | uniq | fzf)'
+alias h='eval $(history 0 | sed -E "s/\s*[0-9]+\s+//" | sort | uniq | fzf)'
 
-alias jupyter='$HOME/.config/nvim/.venv/bin/jupyter'
+alias jupyter="$HOME/.config/nvim/.venv/bin/jupyter"
 
 nvm use default > /dev/null
 
 export NVIM="$HOME/.config/nvim"
 
-export EDITOR='~/nvim/bin/nvim'
-export VISUAL='~/nvim/bin/nvim'
+export EDITOR="$HOME/nvim/bin/nvim"
+export VISUAL="$HOME/nvim/bin/nvim"
 
 . "$HOME/.cargo/env"
 
