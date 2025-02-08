@@ -1,0 +1,7 @@
+## the background color page
+set default-bg '#000000'
+set default-fg '#DDDDDD'
+set recolor
+set recolor-lightcolor '#121212'
+set statusbar-bg '#2980b9'
+set selection-clipboard clipboard

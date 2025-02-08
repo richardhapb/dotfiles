@@ -6,11 +6,13 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
     source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
+export XDG_CONFIG_HOME="$HOME/.config"
+
 if [[ "$OSTYPE" == "darwin"* ]]; then
     export ICLOUD="/Users/richard/Library/Mobile Documents/com~apple~CloudDocs"
     export IN="$HOME/Documents/Brain/Inbox"
     export DEV0="$HOME/Documents/Developer"
-    export DEV="$HOME/Documents/dev"
+    export DEV="$HOME/proj"
     export NOTES="$HOME/Documents/notes"
     # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
     source $(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
@@ -34,6 +36,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
 
     export SNVIM="$DEV/cont/neovim"
     export PKG_CONFIG_PATH=$(brew --prefix zathura)/lib/pkgconfig:$PKG_CONFIG_PATH
+    export BOOKS="$HOME/Documents/Books"
 
     alias sed='gsed'
 elif [[ "$OSTYPE" == "linux-gnu" ]]; then
@@ -151,9 +154,6 @@ elif [[ "$OSTYPE" == "linux-gnu" ]]; then
     export SNVIM="$HOME/ddev/neovim"
 fi
 
-export PATH=$PATH:$HOME/.local/bin
-export PATH=$PATH:$HOME/.local/share/nvim/mason/bin
-
 export PYENV_ROOT="$HOME/.pyenv"
 command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
@@ -168,7 +168,6 @@ alias va="source .venv/bin/activate"
 alias ls="ls -G"
 alias ll="ls -lhaG"
 alias cdn='cd ~/.config/nvim'
-alias nvim='~/nvim/bin/nvim'
 alias vps="ssh ubuntu@3.145.58.151"
 
 # Git
@@ -216,6 +215,8 @@ export VISUAL="$HOME/nvim/bin/nvim"
 export HISTSIZE=100000
 export HISTFILESIZE=100000
 export HISTCONTROL=ignoredups:ignorespace  # Avoid duplicate entries
+
+export PATH=$HOME/.local/bin:$PATH
 
 
 typeset -g POWERLEVEL9K_INSTANT_PROMPT=off
