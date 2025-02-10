@@ -31,12 +31,12 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     export PATH=$PATH:"/Users/richard/texpresso/build"
     export PATH=$PATH:"/Users/richard/kanata"
     export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH:/Users/richard/mongodb/bin"
-    export PATH="/opt/homebrew/bin:$PATH"
     export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
 
     export SNVIM="$DEV/cont/neovim"
     export PKG_CONFIG_PATH=$(brew --prefix zathura)/lib/pkgconfig:$PKG_CONFIG_PATH
     export BOOKS="$HOME/Documents/Books"
+    export PATH="/opt/homebrew/bin:$PATH"
 
     alias sed='gsed'
 elif [[ "$OSTYPE" == "linux-gnu" ]]; then

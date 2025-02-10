@@ -24,7 +24,7 @@ shift + alt - l : yabai -m window --swap east
 shift + alt - z : yabai -m window --display west; yabai -m display --focus west;
 shift + alt - x : yabai -m window --display east; yabai -m display --focus east;
 
-alt - n : yabai -m window --focus recent;
+shift + alt - n : yabai -m window --focus recent;
 
 shift + alt - a : yabai -m space --switch prev;
 shift + alt - s : yabai -m space --switch next;
