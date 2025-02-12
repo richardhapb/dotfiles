@@ -5,11 +5,11 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         if ! dpkg -l | grep glibc ; then
                 sudo apt install glibc-source -y
         fi
-    wget https://github.com/neovim/neovim/releases/download/nightly/nvim-linux64.tar.gz -O $HOME/$name
-    folder_name=nvim-linux64
+    folder_name=nvim-linux-x86_64
+    wget https://github.com/neovim/neovim/releases/download/nightly/$folder_name.tar.gz -O $HOME/$name
 elif [[ "$OSTYPE" == "darwin"* ]]; then
-    wget https://github.com/neovim/neovim/releases/download/nightly/nvim-macos-arm64.tar.gz -O $HOME/$name
     folder_name=nvim-macos-arm64
+    wget https://github.com/neovim/neovim/releases/download/nightly/$folder_name.tar.gz -O $HOME/$name
 fi
 
 xattr -c $HOME/$name
