@@ -208,6 +208,7 @@ alias jupyter="$HOME/.config/nvim/.venv/bin/jupyter"
 nvm use default > /dev/null
 
 export NVIM="$HOME/.config/nvim"
+export DOTFILES="$HOME/dotfiles"
 
 export EDITOR="$HOME/nvim/bin/nvim"
 export VISUAL="$HOME/nvim/bin/nvim"
