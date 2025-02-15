@@ -201,6 +201,8 @@ alias gf='git fetch'
 alias gm='git merge'
 alias h='eval $(history 0 | sed -E "s/\s*[0-9]+\s+//" | sort | uniq | fzf)'
 
+bindkey -s ^f "tmux-sessionizer\n"
+
 alias jupyter="$HOME/.config/nvim/.venv/bin/jupyter"
 
 nvm use default > /dev/null
