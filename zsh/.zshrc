@@ -1,12 +1,10 @@
-source .zprofile
-
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    source .zsh_mac
+    source "$HOME/.zsh_mac"
 elif [[ "$OSTYPE" == "linux-gnu" ]]; then
-    source .zsh_linux
+    source "$HOME/.zsh_linux"
 fi
 
 if command -v tmux &> /dev/null && [ -n "$PS1" ] && [[ ! "$TERM" =~ screen ]] && [[ ! "$TERM" =~ tmux ]] && [ -z "$TMUX" ]; then
-  exec tmux
+  tmux || echo "Error initializing tmux"
 fi
 
