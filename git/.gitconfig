@@ -5,6 +5,8 @@
     autocrlf = input
 [push]
     default = current
+[submodule]
+    recurse = true
 [alias]
     a = add .
     st = status

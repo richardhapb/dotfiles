@@ -1,5 +1,4 @@
 source ~/powerlevel10k/powerlevel10k.zsh-theme
-export DEV="$HOME"/dev
 source ~/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
 
 # ~/.bashrc: executed by bash(1) for non-login shells.
@@ -107,6 +106,12 @@ export PATH=$PATH:/home/richard/pycharm-2024.3/bin
 export PATH=$PATH:/usr/lib/snap
 export PATH=$PATH:/opt/nvim-linux64/bin
 
-export DEV="$HOME/dev"
+if [ -d "$HOME/ddev" ]; then
+    export DEV="$HOME/ddev"
+    export SNVIM="$HOME/ddev/neovim"
+else
+    export DEV="$HOME/dev"
+    export SNVIM="$HOME/dev/neovim"
+fi
+
 export NOTES="$HOME/notes"
-export SNVIM="$HOME/ddev/neovim"
