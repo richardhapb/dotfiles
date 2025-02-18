@@ -29,6 +29,8 @@ shift + alt - n : yabai -m window --focus recent;
 shift + alt - a : yabai -m space --switch prev;
 shift + alt - s : yabai -m space --switch next;
 
+shift + alt - c : yabai -m space --create
+
 shift + alt - 1 : yabai -m window --space 1; yabai -m space --focus 1;
 shift + alt - 2 : yabai -m window --space 2; yabai -m space --focus 2;
 shift + alt - 3 : yabai -m window --space 3; yabai -m space --focus 3;

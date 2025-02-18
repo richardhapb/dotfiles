@@ -73,5 +73,3 @@ export HISTSIZE=100000
 export HISTFILESIZE=100000
 export HISTCONTROL=ignoredups:ignorespace  # Avoid duplicate entries
 
-export PATH=$HOME/.local/bin:$PATH
-
