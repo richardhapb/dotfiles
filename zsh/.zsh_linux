@@ -106,9 +106,9 @@ export PATH=$PATH:/home/richard/pycharm-2024.3/bin
 export PATH=$PATH:/usr/lib/snap
 export PATH=$PATH:/opt/nvim-linux64/bin
 
-if [ -d "$HOME/ddev" ]; then
-    export DEV="$HOME/ddev"
-    export SNVIM="$HOME/ddev/neovim"
+if [ -d "$HOME/proj" ]; then
+    export DEV="$HOME/proj"
+    export SNVIM="$HOME/proj/cont/neovim"
 else
     export DEV="$HOME/dev"
     export SNVIM="$HOME/dev/neovim"

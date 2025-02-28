@@ -7,13 +7,68 @@ typeset -g POWERLEVEL9K_INSTANT_PROMPT=off
 
 export XDG_CONFIG_HOME="$HOME/.config"
 
-export PYENV_ROOT="$HOME/.pyenv"
-command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init -)"
+# Essential paths (minimal set at startup)
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+# Cache expensive operations
+
+# Create a cache file that gets regenerated daily or when needed
+CACHE_FILE="$HOME/.zsh_cache"
+CACHE_EXPIRY=86400 # 24 hours in seconds
+
+# Only regenerate cache if it doesn't exist or is older than expiry time
+if [[ ! -f "$CACHE_FILE" ]]; then
+    # Cache file doesn't exist, create it
+    mkdir -p "$(dirname "$CACHE_FILE")"
+    touch "$CACHE_FILE"
+    NEEDS_REGEN=true
+else
+    # Check if cache is older than expiry time
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS uses different stat format
+        FILE_MOD_TIME=$(stat -f %m "$CACHE_FILE" 2>/dev/null)
+    else
+        # Linux stat format
+        FILE_MOD_TIME=$(stat -c %Y "$CACHE_FILE" 2>/dev/null)
+    fi
+
+    CURRENT_TIME=$(date +%s)
+    if (( CURRENT_TIME - FILE_MOD_TIME > CACHE_EXPIRY )); then
+        NEEDS_REGEN=true
+    else
+        NEEDS_REGEN=false
+    fi
+fi
+
+if [[ "$NEEDS_REGEN" == true ]]; then  # Cache Homebrew prefixes to avoid slow `brew --prefix` calls
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        echo "export HOMEBREW_PREFIX=\"$(brew --prefix)\"" > "$CACHE_FILE"
+        echo "export JAVA_HOME=\"$(brew --prefix java)@17\"" >> "$CACHE_FILE"
+        echo "export SPARK_HOME=\"$(brew --prefix apache-spark)/libexec\"" >> "$CACHE_FILE"
+        echo "export LLVM_PATH=\"$(brew --prefix llvm)/bin\"" >> "$CACHE_FILE"
+    fi
+    echo "export ZSH_HIGHLIGHT_PATH=\"$HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh\"" >> "$CACHE_FILE"
+    echo "export ZSH_SUGGESTIONS_PATH=\"$HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh\"" >> "$CACHE_FILE"
+    echo "export P10K_PATH=\"$HOMEBREW_PREFIX/share/powerlevel10k/powerlevel10k.zsh-theme\"" >> "$CACHE_FILE"
+fi
+
+source "$CACHE_FILE"
+
+# Lazy load expensive tools
+lazy_load_nvm() {
+    unset -f nvm node npm npx
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+    nvm use default > /dev/null
+}
+
+lazy_load_pyenv() {
+    unset -f pyenv python pip
+    export PYENV_ROOT="$HOME/.pyenv"
+    export PATH="$PYENV_ROOT/bin:$PATH"
+    eval "$(pyenv init -)"
+}
 
 alias d="cd $DEV"
 alias cdd='cd ~/dev'
@@ -57,8 +112,6 @@ alias h='eval $(history 0 | sed -E "s/\s*[0-9]+\s+//" | sort | uniq | fzf)'
 
 bindkey -s ^f "tmux-sessionizer\n"
 
-nvm use default > /dev/null
-
 export NVIM="$HOME/.config/nvim"
 export DOTFILES="$HOME/dotfiles"
 
@@ -67,7 +120,28 @@ export VISUAL="$HOME/nvim/bin/nvim"
 
 . "$HOME/.cargo/env"
 
+# Create lightweight function stubs that trigger real loading only when used
+nvm() { lazy_load_nvm; nvm "$@"; }
+node() { lazy_load_nvm; node "$@"; }
+npm() { lazy_load_nvm; npm "$@"; }
+npx() { lazy_load_nvm; npx "$@"; }
+
+pyenv() { lazy_load_pyenv; pyenv "$@"; }
+python() {
+    # Only lazy load if it's a pyenv call, not system Python
+    if [[ -z $(which python) || $(which python) == *".pyenv"* ]]; then
+        lazy_load_pyenv
+    fi
+    python "$@"
+}
+pip() {
+    if [[ -z $(which pip) || $(which pip) == *".pyenv"* ]]; then
+        lazy_load_pyenv
+    fi
+    pip "$@"
+}
+
+export XDG_CONFIG_HOME="$HOME/.config"
 export HISTSIZE=100000
 export HISTFILESIZE=100000
-export HISTCONTROL=ignoredups:ignorespace  # Avoid duplicate entries
-
+export HISTCONTROL=ignoredups:ignorespace
