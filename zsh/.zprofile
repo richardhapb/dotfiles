@@ -8,7 +8,7 @@ typeset -g POWERLEVEL9K_INSTANT_PROMPT=off
 export XDG_CONFIG_HOME="$HOME/.config"
 
 # Essential paths (minimal set at startup)
-export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$HOME/.local/share/nvim/mason/bin"
 
 # Cache expensive operations
 
@@ -54,6 +54,12 @@ fi
 
 source "$CACHE_FILE"
 
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+if command -v pyenv >/dev/null; then
+    eval "$(pyenv init --path)"
+fi
+
 # Lazy load expensive tools
 lazy_load_nvm() {
     unset -f nvm node npm npx
@@ -63,20 +69,12 @@ lazy_load_nvm() {
     nvm use default > /dev/null
 }
 
-lazy_load_pyenv() {
-    unset -f pyenv python pip
-    export PYENV_ROOT="$HOME/.pyenv"
-    export PATH="$PYENV_ROOT/bin:$PATH"
-    eval "$(pyenv init -)"
-}
-
 alias d="cd $DEV"
 alias cdd='cd ~/dev'
 alias va="source .venv/bin/activate"
 alias ls="ls -G"
 alias ll="ls -lhaG"
 alias cdn='cd ~/.config/nvim'
-alias vps="ssh ubuntu@3.145.58.151"
 
 # Git
 alias g='git'
@@ -126,22 +124,6 @@ node() { lazy_load_nvm; node "$@"; }
 npm() { lazy_load_nvm; npm "$@"; }
 npx() { lazy_load_nvm; npx "$@"; }
 
-pyenv() { lazy_load_pyenv; pyenv "$@"; }
-python() {
-    # Only lazy load if it's a pyenv call, not system Python
-    if [[ -z $(which python) || $(which python) == *".pyenv"* ]]; then
-        lazy_load_pyenv
-    fi
-    python "$@"
-}
-pip() {
-    if [[ -z $(which pip) || $(which pip) == *".pyenv"* ]]; then
-        lazy_load_pyenv
-    fi
-    pip "$@"
-}
-
-export XDG_CONFIG_HOME="$HOME/.config"
 export HISTSIZE=100000
 export HISTFILESIZE=100000
 export HISTCONTROL=ignoredups:ignorespace

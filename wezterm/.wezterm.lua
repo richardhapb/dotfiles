@@ -76,6 +76,7 @@ config.window_background_image_hsb = {
    brightness = 0.1
 }
 config.use_ime = true
+config.enable_kitty_graphics = true
 
 config.colors = {
    background = "#0b0e14",

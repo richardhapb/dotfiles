@@ -1,11 +1,11 @@
 background = 0b0e14
 foreground = dddddd
 font-size = 13
-window-save-state = always
+
 window-decoration = false
 macos-non-native-fullscreen=true
 
 keybind="alt+v=toggle_visibility"
 keybind="alt+f=toggle_fullscreen"
 keybind="alt+t=toggle_quick_terminal"
-
+theme = tokyonight_moon
