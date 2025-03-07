@@ -84,6 +84,7 @@ set $app_picker App picker (w) wezterm
 
 mode "app_picker" {
         bindsym w exec --no-startup-id ~/wezterm.sh
+        bindsym g exec --no-startup-id /usr/bin/ghostty
         bindsym Return mode "default"
         bindsym Escape mode "default"
 }
