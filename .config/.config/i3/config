@@ -6,8 +6,7 @@
 #
 
 exec --no-startup-id /usr/libexec/gsd-xsettings
-exec_always --no-startup-id ~/.screenlayout/home.sh
-# exec --no-startup-id xrandr --output HDMI-A-0 --primary --output eDP --off
+exec_always --no-startup-id ~/.screenlayout/work.sh
 
 # i3 config file (v4)
 #

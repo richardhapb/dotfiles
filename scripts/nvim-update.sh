@@ -1,1 +1,0 @@
-.local/bin/nvim-update.sh
