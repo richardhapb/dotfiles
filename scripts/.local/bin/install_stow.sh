@@ -1,6 +1,11 @@
 #!/bin/bash
 
-# Create stow for all files in the current directory
+# Create stow for all files in the DOTFILES directory
+
+if [ -z "$DOTFILES" ]; then
+    echo "DOTFILES should be defined"
+    exit 1
+fi
 
 cd $DOTFILES
 
