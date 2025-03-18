@@ -3,6 +3,7 @@
     email = richard.hapb@icloud.com
 [core]
     autocrlf = input
+    fileMode = false
 [push]
     default = current
 [submodule]
