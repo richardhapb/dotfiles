@@ -7,7 +7,7 @@
 [push]
     default = current
 [submodule]
-    recurse = true
+    recurse = false
 [alias]
     a = add .
     st = status

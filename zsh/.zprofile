@@ -5,6 +5,9 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
 fi
 typeset -g POWERLEVEL9K_INSTANT_PROMPT=off
 
+export LANG="en_US.UTF-8"
+export LC_ALL="en_US.UTF-8"
+
 export XDG_CONFIG_HOME="$HOME/.config"
 
 # Essential paths (minimal set at startup)
