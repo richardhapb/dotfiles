@@ -5,6 +5,7 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
 fi
 typeset -g POWERLEVEL9K_INSTANT_PROMPT=off
 
+# Locals
 export LANG="en_US.UTF-8"
 export LC_ALL="en_US.UTF-8"
 
@@ -109,6 +110,7 @@ alias gf='git fetch'
 alias gm='git merge'
 
 alias h='eval $(history 0 | sed -E "s/\s*[0-9]+\s+//" | sort | uniq | fzf)'
+alias v="nvim"
 
 bindkey -s ^f "tmux-sessionizer\n"
 
