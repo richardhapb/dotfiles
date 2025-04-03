@@ -167,8 +167,12 @@ bindsym $mod+8 workspace number $ws8
 bindsym $mod+9 workspace number $ws9
 bindsym $mod+0 workspace number $ws10
 
-# move focused container to workspace
-bindsym $mod+Shift+1 move container to workspace number $ws1
+
+# Move focused container to workspace
+
+# I need to differentiate when i want to insert `¡` character or move the workspace
+bindsym $mod+Shift+1 exec --no-startup-id smart_workspace_move.sh 1 >> /tmp/i3_workspace_move.log
+
 bindsym $mod+Shift+2 move container to workspace number $ws2
 bindsym $mod+Shift+3 move container to workspace number $ws3
 bindsym $mod+Shift+4 move container to workspace number $ws4

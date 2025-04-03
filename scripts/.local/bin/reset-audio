@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+set -e
+
+sudo alsa force-reload
 systemctl --user restart pipewire pipewire-pulse wireplumber
 echo "Audio system has been reset"
 
