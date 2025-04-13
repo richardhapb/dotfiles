@@ -64,14 +64,6 @@ if command -v pyenv >/dev/null; then
     eval "$(pyenv init --path)"
 fi
 
-# Lazy load expensive tools
-lazy_load_nvm() {
-    unset -f nvm node npm npx
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-    nvm use default > /dev/null
-}
-
 alias d="cd $DEV"
 alias cdd='cd ~/dev'
 alias va="source .venv/bin/activate"
@@ -119,14 +111,11 @@ export DOTFILES="$HOME/dotfiles"
 
 export EDITOR="$HOME/nvim/bin/nvim"
 export VISUAL="$HOME/nvim/bin/nvim"
+export SYSTEMD_EDITOR="$HOME/nvim/bin/nvim"
 
 . "$HOME/.cargo/env"
 
-# Create lightweight function stubs that trigger real loading only when used
-nvm() { lazy_load_nvm; nvm "$@"; }
-node() { lazy_load_nvm; node "$@"; }
-npm() { lazy_load_nvm; npm "$@"; }
-npx() { lazy_load_nvm; npx "$@"; }
+eval "$(fnm env --use-on-cd --shell zsh)"
 
 export HISTSIZE=100000
 export HISTFILESIZE=100000
