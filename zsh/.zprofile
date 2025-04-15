@@ -12,7 +12,7 @@ export LC_ALL="en_US.UTF-8"
 export XDG_CONFIG_HOME="$HOME/.config"
 
 # Essential paths (minimal set at startup)
-export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$HOME/.local/share/nvim/mason/bin"
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$HOME/.local/share/nvim/mason/bin:$HOME/go/bin"
 
 # Cache expensive operations
 
