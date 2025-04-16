@@ -5,8 +5,9 @@
 # this file and re-run i3-config-wizard(1).
 #
 
+exec --no-startup-id xrdb -merge ~/.Xresources
 exec --no-startup-id /usr/libexec/gsd-xsettings
-exec_always --no-startup-id ~/.screenlayout/work.sh
+exec --no-startup-id ~/.screenlayout/work.sh
 
 # i3 config file (v4)
 #
