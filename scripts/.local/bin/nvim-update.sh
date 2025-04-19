@@ -11,7 +11,7 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     if [[ $(uname -m) == "aarch64" ]]; then
         folder_name=nvim-linux-arm64
     fi
-    wget https://github.com/neovim/neovim/releases/download/nightly/$folder_name.tar.gz -O $HOME/$name
+    wget https://github.com/neovim/neovim/releases/download/v0.11.0/nvim-linux-x86_64.tar.gz -O $HOME/$name
 elif [[ "$OSTYPE" == "darwin"* ]]; then
     folder_name=nvim-macos-arm64
     wget https://github.com/neovim/neovim/releases/download/nightly/$folder_name.tar.gz -O $HOME/$name

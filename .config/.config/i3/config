@@ -8,6 +8,7 @@
 exec --no-startup-id xrdb -merge ~/.Xresources
 exec --no-startup-id /usr/libexec/gsd-xsettings
 exec --no-startup-id ~/.screenlayout/work.sh
+exec --no-startup-id feh --bg-fill ~/things/wallpapers/city.jpg
 
 # i3 config file (v4)
 #
@@ -15,7 +16,7 @@ exec --no-startup-id ~/.screenlayout/work.sh
 
 font pango:DejaVu Sans Mono 10
 
-set $mod Mod1
+set $mod Mod4
 
 # Font for window titles. Will also be used by the bar unless a different font
 # is used in the bar {} block below.
@@ -190,6 +191,7 @@ bindsym $mod+0 workspace number $ws10
 # I need to differentiate when i want to insert `¡` character or move the workspace
 bindsym $mod+Shift+1 exec --no-startup-id smart_workspace_move.sh 1 >> /tmp/i3_workspace_move.log
 
+# bindsym $mod+Shift+1 move container to workspace number $ws1
 bindsym $mod+Shift+2 move container to workspace number $ws2
 bindsym $mod+Shift+3 move container to workspace number $ws3
 bindsym $mod+Shift+4 move container to workspace number $ws4
