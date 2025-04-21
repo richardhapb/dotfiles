@@ -18,7 +18,7 @@ exec_always --no-startup-id feh --bg-fill ~/.screenlayout/wallpaper.sh
 #
 # Please see https://i3wm.org/docs/userguide.html for a complete reference!
 
-font pango:DejaVu Sans Mono 10
+font pango:JetBrainsMono Nerd Font 10
 
 set $mod Mod4
 
@@ -246,6 +246,18 @@ bar {
         output HDMI-1
         output eDP-1
         status_command i3status
+
+        colors {
+            background #222436
+            statusline #c8d3f5
+            separator #444a73
+
+            focused_workspace  #82aaff #82aaff #1b1d2b
+            active_workspace   #444a73 #364A82 #c8d3f5
+            inactive_workspace #1b1d2b #222436 #828bb8
+            urgent_workspace   #ff757f #ff757f #1b1d2b
+            binding_mode       #fca7ea #fca7ea #1b1d2b
+        }
 }
 
 hide_edge_borders smart
