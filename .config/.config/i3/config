@@ -8,7 +8,7 @@
 exec --no-startup-id xrdb -merge ~/.Xresources
 exec --no-startup-id /usr/libexec/gsd-xsettings
 exec --no-startup-id ~/.screenlayout/work.sh
-exec --no-startup-id feh --bg-fill ~/things/wallpapers/city.jpg
+exec --no-startup-id feh --bg-scale ~/things/wallpapers/city.jpg
 
 # i3 config file (v4)
 #
