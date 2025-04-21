@@ -50,10 +50,10 @@ if [[ "$NEEDS_REGEN" == true ]]; then  # Cache Homebrew prefixes to avoid slow `
         echo "export JAVA_HOME=\"$(brew --prefix java)@17\"" >> "$CACHE_FILE"
         echo "export SPARK_HOME=\"$(brew --prefix apache-spark)/libexec\"" >> "$CACHE_FILE"
         echo "export LLVM_PATH=\"$(brew --prefix llvm)/bin\"" >> "$CACHE_FILE"
+        echo "export ZSH_HIGHLIGHT_PATH=\"$HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh\"" >> "$CACHE_FILE"
+        echo "export ZSH_SUGGESTIONS_PATH=\"$HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh\"" >> "$CACHE_FILE"
+        echo "export P10K_PATH=\"$HOMEBREW_PREFIX/share/powerlevel10k/powerlevel10k.zsh-theme\"" >> "$CACHE_FILE"
     fi
-    echo "export ZSH_HIGHLIGHT_PATH=\"$HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh\"" >> "$CACHE_FILE"
-    echo "export ZSH_SUGGESTIONS_PATH=\"$HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh\"" >> "$CACHE_FILE"
-    echo "export P10K_PATH=\"$HOMEBREW_PREFIX/share/powerlevel10k/powerlevel10k.zsh-theme\"" >> "$CACHE_FILE"
 fi
 
 source "$CACHE_FILE"
