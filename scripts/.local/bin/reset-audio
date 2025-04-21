@@ -2,7 +2,7 @@
 
 set -e
 
-sudo alsa force-reload
-systemctl --user restart pipewire pipewire-pulse wireplumber
+# sudo alsa restore
+systemctl --user restart pipewire pipewire-pulse wireplumber pipewire.socket pipewire-pulse.socket
 echo "Audio system has been reset"
 
