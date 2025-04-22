@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+set -e
+
+if ! command -v wakeonlan >/dev/null 2>&1; then
+    echo "Error: wakeonlan is not installed" >&2
+    exit 1
+fi
+
+host=$1
+
+if [[ -z "$host" ]]; then
+    echo "You must indicate a host"
+    exit 1
+fi
+
+ssh_config="$HOME/.ssh/config"
+in_host=false
+hostname=""
+
+while IFS= read -r line; do
+    # This resets if the Host is not the one requested
+    if [[ "$line" == "Host "* ]]; then
+        in_host=false
+    fi
+
+    if [[ "$line" == "Host $host" ]]; then
+        echo "Host found"
+        echo "$line"
+        in_host=true
+        continue
+    fi
+
+    if "$in_host"; then
+        if [[ "$line" =~ ^[[:space:]]*HostName[[:space:]]+ ]]; then
+            hostname=$(echo "$line" | awk '{print $2}')
+        fi
+    fi
+done < "$ssh_config"
+
+if [[ -z "$hostname" ]]; then
+    echo "HostName not found"
+    exit 1
+fi
+
+echo "Waking $hostname..."
+
+if ! output=$(wakeonlan "$hostname" 2>&1); then
+    echo "Error waking $hostname"
+    echo "$output"
+    exit 1
+fi
+
+echo "Wake $hostname successfully"
