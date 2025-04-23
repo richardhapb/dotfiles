@@ -12,7 +12,7 @@ exec --no-startup-id ghostty
 exec --no-startup-id brave
 exec --no-startup-id xcompmgr -n
 exec_always --no-startup-id setxkbmap -option compose:ralt
-exec_always --no-startup-id feh --bg-fill ~/.screenlayout/wallpaper.sh
+exec_always --no-startup-id ~/.screenlayout/wallpaper.sh
 
 # i3 config file (v4)
 #

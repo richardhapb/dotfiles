@@ -10,7 +10,7 @@ fi
 host=$1
 
 if [[ -z "$host" ]]; then
-    echo "You must indicate a host"
+    echo "You must indicate a MAC address"
     exit 1
 fi
 
