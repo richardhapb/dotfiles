@@ -1,25 +1,31 @@
 #!/bin/bash
-name=nvim.tar.gz
 
-if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        if ! dpkg -l | grep glibc ; then
-                sudo apt install glibc-source -y
-        fi
-    folder_name=nvim-linux-x86_64
+set -euo pipefail
 
-    # Raspberry Pi
-    if [[ $(uname -m) == "aarch64" ]]; then
-        folder_name=nvim-linux-arm64
-    fi
-    wget https://github.com/neovim/neovim/releases/download/v0.11.0/nvim-linux-x86_64.tar.gz -O $HOME/$name
-elif [[ "$OSTYPE" == "darwin"* ]]; then
-    folder_name=nvim-macos-arm64
-    wget https://github.com/neovim/neovim/releases/download/nightly/$folder_name.tar.gz -O $HOME/$name
+if [ -z "${DEV-}" ]; then
+    echo "Error: DEV environment variable is not set"
+    exit 1
 fi
 
-xattr -c $HOME/$name
-rm -rf $HOME/nvim
-tar -xvf $HOME/$name -C $HOME
-mv $HOME/$folder_name $HOME/nvim
-rm $HOME/$name
-ln -sf $HOME/nvim/bin/nvim $HOME/.local/bin/nvim
+nvim_dir="$DEV/cont/neovim"
+dest_dir="$HOME/nvim"
+
+if [ ! -d "$nvim_dir" ]; then
+    mkdir -p "$nvim_dir"
+    git clone git@github.com:richardhapb/neovim "$nvim_dir"
+fi
+
+cd "$nvim_dir" || exit 1
+
+if ! git remote -v | grep -q upstream; then
+    git remote add upstream git@github.com:neovim/neovim
+fi
+
+if [ ! -d "$dest_dir" ]; then
+    mkdir -p "$dest_dir"
+fi
+
+git pull upstream master
+
+make CMAKE_INSTALL_PREFIX="$dest_dir" CMAKE_BUILD_TYPE=RelWithDebInfo install
+

@@ -4,7 +4,7 @@ export ICLOUD="/Users/richard/Library/Mobile Documents/com~apple~CloudDocs"
 export IN="$HOME/Documents/Brain/Inbox"
 export DEV0="$HOME/Documents/Developer"
 export DEV="$HOME/proj"
-export NOTES="$HOME/Documents/notes"
+export NOTES="$HOME/notes"
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 source $(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source $(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
@@ -30,3 +30,12 @@ export BOOKS="$HOME/Documents/Books"
 export PATH="/opt/homebrew/bin:$PATH"
 
 alias sed='gsed'
+
+# pnpm
+export PNPM_HOME="/Users/richard/Library/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+# pnpm end
+
