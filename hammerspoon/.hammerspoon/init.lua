@@ -1,3 +1,5 @@
+hs.loadSpoon("EmmyLua")
+
 hs.alert.show("Hammerspoon loaded 🤘")
 
 hs.hotkey.bind({ "alt", "shift" }, "r", function()
@@ -78,7 +80,10 @@ local function showWorkspace(n)
     local ws = workspaces[id]
     if ws == n then
       win:focus()
-      win:application():activate()
+      local app = win:application()
+      if app then
+        app:activate()
+      end
     else
       moveOffscreen(win)
     end
@@ -87,7 +92,10 @@ local function showWorkspace(n)
   -- Show all windows in the workspace
   for _, win in ipairs(hs.window.allWindows()) do
     if workspaces[tostring(win:id())] == n then
-      win:application():activate()
+      local app = win:application()
+      if app then
+        app:activate()
+      end
       win:focus()
       win:centerOnScreen()
     end
@@ -184,7 +192,7 @@ hs.hotkey.bind({ "alt" }, "f", function() resize_window("f") end)
 local mouseCircle = nil
 local mouseCircleTimer = nil
 
-function mouseHighlight()
+local function mouseHighlight()
   -- Delete an existing highlight if it exists
   if mouseCircle then
     mouseCircle:delete()
@@ -196,6 +204,9 @@ function mouseHighlight()
   local mousepoint = hs.mouse.absolutePosition()
   -- Prepare a big red circle around the mouse pointer
   mouseCircle = hs.drawing.circle(hs.geometry.rect(mousepoint.x - 40, mousepoint.y - 40, 80, 80))
+  if not mouseCircle then
+    return
+  end
   mouseCircle:setStrokeColor({ ["red"] = 1, ["blue"] = 0, ["green"] = 0, ["alpha"] = 1 })
   mouseCircle:setFill(false)
   mouseCircle:setStrokeWidth(5)
@@ -208,7 +219,7 @@ function mouseHighlight()
   end)
 end
 
-hs.hotkey.bind({ "cmd", "alt", "shift" }, "D", mouseHighlight)
+hs.hotkey.bind({ "cmd", "ctrl", "shift" }, "D", mouseHighlight)
 
 hs.hotkey.bind({ "alt" }, "P", function()
   local state = hs.spotify.getPlaybackState()
@@ -259,6 +270,10 @@ end
 hs.window.filter.default:subscribe(hs.window.filter.windowFocused, function(win)
   if win:application():name() ~= "Spotify" then
     forceHideApp("Spotify")
+  end
+
+  if win:application():name() ~= "Finder" then
+    forceHideApp("Finder")
   end
 end)
 
