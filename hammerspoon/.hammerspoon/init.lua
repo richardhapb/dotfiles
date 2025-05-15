@@ -1,11 +1,10 @@
-
 hs.alert.show("Hammerspoon loaded 🤘")
 
-hs.hotkey.bind({"alt", "shift"}, "r", function()
+hs.hotkey.bind({ "alt", "shift" }, "r", function()
   hs.reload()
 end)
 
-local currentWorkspace = 1  -- must be initialized explicitly
+local currentWorkspace = 1 -- must be initialized explicitly
 local workspaceDataFile = os.getenv("HOME") .. "/.hammerspoon/workspaces.json"
 local json = hs.json
 
@@ -29,7 +28,7 @@ local function saveWorkspaceData(data)
   if not encoded then
     hs.alert.show("⚠️ JSON encoding failed")
     print("⚠️ Failed to encode workspace data")
-    print(hs.inspect(data))  -- pretty-print for inspection
+    print(hs.inspect(data)) -- pretty-print for inspection
     return
   end
 
@@ -45,7 +44,7 @@ local function saveWorkspaceData(data)
 end
 
 -- Move all visible windows to the center of the screen
-hs.hotkey.bind({"alt", "cmd"}, "r", function()
+hs.hotkey.bind({ "alt", "cmd" }, "r", function()
   local screen = hs.screen.mainScreen()
   local frame = screen:frame()
 
@@ -108,29 +107,29 @@ end
 
 -- Change the workspace using Alt + Number
 for i = 1, maxWorkspaces do
-  hs.hotkey.bind({"alt"}, tostring(i), function()
+  hs.hotkey.bind({ "alt" }, tostring(i), function()
     showWorkspace(i)
   end)
 
   -- Send the window to the workspace using Alt + Shift + Number
-  hs.hotkey.bind({"alt", "shift"}, tostring(i), function()
+  hs.hotkey.bind({ "alt", "shift" }, tostring(i), function()
     assignWindowToWorkspace(i)
   end)
 end
 
-hs.hotkey.bind({"alt"}, "h", function()
+hs.hotkey.bind({ "alt" }, "h", function()
   hs.window.focusedWindow():moveOneScreenWest()
 end)
 
-hs.hotkey.bind({"alt"}, "l", function()
+hs.hotkey.bind({ "alt" }, "l", function()
   hs.window.focusedWindow():moveOneScreenEast()
 end)
 
-hs.hotkey.bind({"alt"}, "k", function()
+hs.hotkey.bind({ "alt" }, "k", function()
   hs.window.focusedWindow():moveOneScreenNorth()
 end)
 
-hs.hotkey.bind({"alt"}, "j", function()
+hs.hotkey.bind({ "alt" }, "j", function()
   hs.window.focusedWindow():moveOneScreenSouth()
 end)
 
@@ -176,41 +175,42 @@ local function resize_window(position)
 end
 
 -- Snap the window to the left half of the screen
-hs.hotkey.bind({"alt", "shift"}, "h", function() resize_window("l") end)
-hs.hotkey.bind({"alt", "shift"}, "l", function() resize_window("r") end)
-hs.hotkey.bind({"alt", "shift"}, "k", function() resize_window("t") end)
-hs.hotkey.bind({"alt", "shift"}, "j", function() resize_window("b") end)
-hs.hotkey.bind({"alt"}, "f", function() resize_window("f") end)
+hs.hotkey.bind({ "alt", "shift" }, "h", function() resize_window("l") end)
+hs.hotkey.bind({ "alt", "shift" }, "l", function() resize_window("r") end)
+hs.hotkey.bind({ "alt", "shift" }, "k", function() resize_window("t") end)
+hs.hotkey.bind({ "alt", "shift" }, "j", function() resize_window("b") end)
+hs.hotkey.bind({ "alt" }, "f", function() resize_window("f") end)
 
 local mouseCircle = nil
 local mouseCircleTimer = nil
 
 function mouseHighlight()
-    -- Delete an existing highlight if it exists
-    if mouseCircle then
-        mouseCircle:delete()
-        if mouseCircleTimer then
-            mouseCircleTimer:stop()
-        end
+  -- Delete an existing highlight if it exists
+  if mouseCircle then
+    mouseCircle:delete()
+    if mouseCircleTimer then
+      mouseCircleTimer:stop()
     end
-    -- Get the current co-ordinates of the mouse pointer
-    local mousepoint = hs.mouse.absolutePosition()
-    -- Prepare a big red circle around the mouse pointer
-    mouseCircle = hs.drawing.circle(hs.geometry.rect(mousepoint.x-40, mousepoint.y-40, 80, 80))
-    mouseCircle:setStrokeColor({["red"]=1,["blue"]=0,["green"]=0,["alpha"]=1})
-    mouseCircle:setFill(false)
-    mouseCircle:setStrokeWidth(5)
-    mouseCircle:show()
+  end
+  -- Get the current co-ordinates of the mouse pointer
+  local mousepoint = hs.mouse.absolutePosition()
+  -- Prepare a big red circle around the mouse pointer
+  mouseCircle = hs.drawing.circle(hs.geometry.rect(mousepoint.x - 40, mousepoint.y - 40, 80, 80))
+  mouseCircle:setStrokeColor({ ["red"] = 1, ["blue"] = 0, ["green"] = 0, ["alpha"] = 1 })
+  mouseCircle:setFill(false)
+  mouseCircle:setStrokeWidth(5)
+  mouseCircle:show()
 
-    -- Set a timer to delete the circle after 2 seconds
-    mouseCircleTimer = hs.timer.doAfter(2, function()
-      mouseCircle:delete()
-      mouseCircle = nil
-    end)
+  -- Set a timer to delete the circle after 2 seconds
+  mouseCircleTimer = hs.timer.doAfter(2, function()
+    mouseCircle:delete()
+    mouseCircle = nil
+  end)
 end
-hs.hotkey.bind({"cmd","alt","shift"}, "D", mouseHighlight)
 
-hs.hotkey.bind({"alt"}, "P", function()
+hs.hotkey.bind({ "cmd", "alt", "shift" }, "D", mouseHighlight)
+
+hs.hotkey.bind({ "alt" }, "P", function()
   local state = hs.spotify.getPlaybackState()
 
   if state == hs.spotify.state_paused or state == hs.spotify.state_stopped then
@@ -223,8 +223,46 @@ hs.hotkey.bind({"alt"}, "P", function()
   end
 end)
 
+hs.hotkey.bind({ "alt" }, "N", function()
+  if hs.spotify.isPlaying() then
+    hs.spotify.next()
+  end
+end)
+
+hs.hotkey.bind({ "alt" }, "P", function()
+  if hs.spotify.isPlaying() then
+    hs.spotify.next()
+  end
+end)
+
+hs.hotkey.bind({ "alt" }, "down", function()
+  if hs.spotify.isPlaying() then
+    hs.spotify.volumeDown()
+  end
+end)
+
+hs.hotkey.bind({ "alt" }, "up", function()
+  if hs.spotify.isPlaying() then
+    hs.spotify.volumeUp()
+  end
+end)
+
+local function forceHideApp(appName)
+  local script = string.format([[
+    tell application "System Events"
+      set visible of process "%s" to false
+    end tell
+  ]], appName)
+  hs.osascript.applescript(script)
+end
+
+hs.window.filter.default:subscribe(hs.window.filter.windowFocused, function(win)
+  if win:application():name() ~= "Spotify" then
+    forceHideApp("Spotify")
+  end
+end)
+
 -- Restore visible windows for the current workspace after reload
 hs.timer.doAfter(0.5, function()
   showWorkspace(currentWorkspace)
 end)
-
