@@ -1,4 +1,5 @@
 eval "$(/opt/homebrew/bin/brew shellenv)"
+eval "$(/usr/libexec/path_helper)"
 
 export ICLOUD="/Users/richard/Library/Mobile Documents/com~apple~CloudDocs"
 export IN="$HOME/Documents/Brain/Inbox"
