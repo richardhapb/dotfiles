@@ -142,7 +142,7 @@ hs.hotkey.bind({ "alt" }, "j", function()
 end)
 
 --- Send the window in a specified direction
----@param position string
+---@param position "l" | "r" | "t" | "b" | "f"
 local function resize_window(position)
   local win = hs.window.focusedWindow()
   local screen = win:screen()
@@ -221,7 +221,7 @@ end
 
 hs.hotkey.bind({ "cmd", "ctrl", "shift" }, "D", mouseHighlight)
 
-hs.hotkey.bind({ "alt" }, "P", function()
+hs.hotkey.bind({ "alt" }, "space", function()
   local state = hs.spotify.getPlaybackState()
 
   if state == hs.spotify.state_paused or state == hs.spotify.state_stopped then
@@ -258,7 +258,20 @@ hs.hotkey.bind({ "alt" }, "up", function()
   end
 end)
 
-local function forceHideApp(appName)
+--- Hide all windows of an app if the app is not focused
+---@param appName string
+---@param win hs.window
+local function forceHideApp(appName, win)
+  local app = hs.application.get(appName)
+
+  if not app then return end
+
+  for _, appWin in ipairs(app:allWindows()) do
+    if appWin == win then
+      return
+    end
+  end
+
   local script = string.format([[
     tell application "System Events"
       set visible of process "%s" to false
@@ -268,12 +281,15 @@ local function forceHideApp(appName)
 end
 
 hs.window.filter.default:subscribe(hs.window.filter.windowFocused, function(win)
-  if win:application():name() ~= "Spotify" then
-    forceHideApp("Spotify")
-  end
+  local app = win:application()
+  if not app then return end
 
-  if win:application():name() ~= "Finder" then
-    forceHideApp("Finder")
+  local appsToHide = { "Spotify", "Finder", "Brave" }
+
+  for _, appName in ipairs(appsToHide) do
+    if app:name() ~= appName then
+      forceHideApp(appName, win)
+    end
   end
 end)
 
