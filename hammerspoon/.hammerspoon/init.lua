@@ -182,6 +182,47 @@ hs.hotkey.bind({"alt", "shift"}, "k", function() resize_window("t") end)
 hs.hotkey.bind({"alt", "shift"}, "j", function() resize_window("b") end)
 hs.hotkey.bind({"alt"}, "f", function() resize_window("f") end)
 
+local mouseCircle = nil
+local mouseCircleTimer = nil
+
+function mouseHighlight()
+    -- Delete an existing highlight if it exists
+    if mouseCircle then
+        mouseCircle:delete()
+        if mouseCircleTimer then
+            mouseCircleTimer:stop()
+        end
+    end
+    -- Get the current co-ordinates of the mouse pointer
+    local mousepoint = hs.mouse.absolutePosition()
+    -- Prepare a big red circle around the mouse pointer
+    mouseCircle = hs.drawing.circle(hs.geometry.rect(mousepoint.x-40, mousepoint.y-40, 80, 80))
+    mouseCircle:setStrokeColor({["red"]=1,["blue"]=0,["green"]=0,["alpha"]=1})
+    mouseCircle:setFill(false)
+    mouseCircle:setStrokeWidth(5)
+    mouseCircle:show()
+
+    -- Set a timer to delete the circle after 2 seconds
+    mouseCircleTimer = hs.timer.doAfter(2, function()
+      mouseCircle:delete()
+      mouseCircle = nil
+    end)
+end
+hs.hotkey.bind({"cmd","alt","shift"}, "D", mouseHighlight)
+
+hs.hotkey.bind({"alt"}, "P", function()
+  local state = hs.spotify.getPlaybackState()
+
+  if state == hs.spotify.state_paused or state == hs.spotify.state_stopped then
+    hs.spotify.play()
+    hs.alert.show("Playback resumed")
+    hs.spotify.displayCurrentTrack()
+  elseif state == hs.spotify.state_playing then
+    hs.spotify.pause()
+    hs.alert.show("Playback paused")
+  end
+end)
+
 -- Restore visible windows for the current workspace after reload
 hs.timer.doAfter(0.5, function()
   showWorkspace(currentWorkspace)
