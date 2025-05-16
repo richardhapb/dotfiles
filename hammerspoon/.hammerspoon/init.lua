@@ -68,26 +68,41 @@ local function moveOffscreen(win)
   win:setFrame(f)
 end
 
+--- Hide all windows of an app if the app is not focused
+---@param appName string
+local function forceHideApp(appName)
+  local script = string.format([[
+    tell application "System Events"
+      set visible of process "%s" to false
+    end tell
+  ]], appName)
+  hs.osascript.applescript(script)
+end
 
+local function hideObstinateWindows(n)
+  local appsToHide = { "Spotify", "Finder", "Brave" }
+
+  for _, appName in ipairs(appsToHide) do
+    local hide = true
+
+    local app = hs.application.get(appName)
+    if not app then goto continue end
+
+    for _, win in ipairs(app:visibleWindows() or {}) do
+      if workspaces[tostring(win:id())] == n then
+        hide = false
+        break
+      end
+    end
+    if hide then forceHideApp(appName) end
+  end
+  ::continue::
+end
 
 -- Move the windows to the current workspace
 local function showWorkspace(n)
   currentWorkspace = n
   hs.alert.show("Workspace " .. n)
-
-  for _, win in ipairs(hs.window.visibleWindows()) do
-    local id = tostring(win:id())
-    local ws = workspaces[id]
-    if ws == n then
-      win:focus()
-      local app = win:application()
-      if app then
-        app:activate()
-      end
-    else
-      moveOffscreen(win)
-    end
-  end
 
   -- Show all windows in the workspace
   for _, win in ipairs(hs.window.allWindows()) do
@@ -98,8 +113,12 @@ local function showWorkspace(n)
       end
       win:focus()
       win:centerOnScreen()
+    else
+      moveOffscreen(win)
     end
   end
+
+  hideObstinateWindows(n)
 end
 
 -- Move the window to workspace n
@@ -255,41 +274,6 @@ end)
 hs.hotkey.bind({ "alt" }, "up", function()
   if hs.spotify.isPlaying() then
     hs.spotify.volumeUp()
-  end
-end)
-
---- Hide all windows of an app if the app is not focused
----@param appName string
----@param win hs.window
-local function forceHideApp(appName, win)
-  local app = hs.application.get(appName)
-
-  if not app then return end
-
-  for _, appWin in ipairs(app:allWindows()) do
-    if appWin == win then
-      return
-    end
-  end
-
-  local script = string.format([[
-    tell application "System Events"
-      set visible of process "%s" to false
-    end tell
-  ]], appName)
-  hs.osascript.applescript(script)
-end
-
-hs.window.filter.default:subscribe(hs.window.filter.windowFocused, function(win)
-  local app = win:application()
-  if not app then return end
-
-  local appsToHide = { "Spotify", "Finder", "Brave" }
-
-  for _, appName in ipairs(appsToHide) do
-    if app:name() ~= appName then
-      forceHideApp(appName, win)
-    end
   end
 end)
 
