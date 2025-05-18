@@ -22,7 +22,36 @@ end
 -- Pseudo workspace manager
 local workspaces = loadWorkspaceData()
 local maxWorkspaces = 9
+local windowsPosition = {}
+local focusedWindow = {}
 
+windowsPosition = setmetatable(windowsPosition, {
+  __index = function(t, k)
+    local v = rawget(t, k)
+    if v ~= nil then
+      return v
+    end
+
+    -- If not found, try to get window frame
+    for _, win in ipairs(hs.window.allWindows()) do
+      if tostring(win:id()) == k then
+        -- Full screen by default
+        local frame = win:frame()
+        local screen = win:screen()
+        local max = screen:frame()
+        frame.x = max.x
+        frame.y = max.y
+        frame.w = max.w
+        frame.h = max.h
+        rawset(t, k, frame) -- Use rawset to avoid triggering __index
+        return frame
+      end
+    end
+
+    print("Window not found for id:", k)
+    return nil
+  end
+})
 
 -- Save current workspace mapping to file
 local function saveWorkspaceData(data)
@@ -45,25 +74,18 @@ local function saveWorkspaceData(data)
   file:close()
 end
 
--- Move all visible windows to the center of the screen
-hs.hotkey.bind({ "alt", "cmd" }, "r", function()
-  local screen = hs.screen.mainScreen()
-  local frame = screen:frame()
-
-  for _, win in ipairs(hs.window.allWindows()) do
-    if win:isStandard() then
-      local f = win:frame()
-      f.x = frame.x + (frame.w / 2) - (f.w / 2)
-      f.y = frame.y + (frame.h / 2) - (f.h / 2)
-      win:setFrame(f)
-    end
-  end
-  hs.alert.show("Windows recovered 🔥")
-end)
-
--- Hide the window
+--- Hide the window
+---@param win hs.window
 local function moveOffscreen(win)
+  if not win then return end
   local f = win:frame()
+
+  if f.x < 0 then
+    return
+  end
+
+  local id = tostring(win:id())
+  windowsPosition[id] = win:frame()
   f.x = -5000
   win:setFrame(f)
 end
@@ -80,7 +102,7 @@ local function forceHideApp(appName)
 end
 
 local function hideObstinateWindows(n)
-  local appsToHide = { "Spotify", "Finder", "Brave" }
+  local appsToHide = { "Spotify", "Finder", "Brave", "ChatGPT" }
 
   for _, appName in ipairs(appsToHide) do
     local hide = true
@@ -95,39 +117,46 @@ local function hideObstinateWindows(n)
       end
     end
     if hide then forceHideApp(appName) end
+    ::continue::
   end
-  ::continue::
 end
 
 -- Move the windows to the current workspace
 local function showWorkspace(n)
+  focusedWindow[currentWorkspace] = hs.window.focusedWindow()
+
   currentWorkspace = n
   hs.alert.show("Workspace " .. n)
 
   -- Show all windows in the workspace
   for _, win in ipairs(hs.window.allWindows()) do
-    if workspaces[tostring(win:id())] == n then
+    local id = tostring(win:id())
+    if workspaces[id] == n then
       local app = win:application()
+      local savedFrame = windowsPosition[id]
+
       if app then
         app:activate()
       end
-      win:focus()
-      win:centerOnScreen()
+      win:setFrame(savedFrame)
     else
       moveOffscreen(win)
     end
   end
 
   hideObstinateWindows(n)
+  focusedWindow[n]:focus()
 end
 
 -- Move the window to workspace n
 local function assignWindowToWorkspace(n)
   local win = hs.window.focusedWindow()
   if win then
-    workspaces[tostring(win:id())] = n
+    local id = tostring(win:id())
+    workspaces[id] = n
     hs.alert.show("Window assigned to Workspace " .. n)
     saveWorkspaceData(workspaces)
+    windowsPosition[id] = win:frame()
     moveOffscreen(win)
   end
 end
@@ -136,6 +165,22 @@ end
 for i = 1, maxWorkspaces do
   hs.hotkey.bind({ "alt" }, tostring(i), function()
     showWorkspace(i)
+  end)
+
+  -- Move all visible windows to the center of the screen
+  hs.hotkey.bind({ "alt", "cmd" }, "r", function()
+    local screen = hs.screen.mainScreen()
+    local frame = screen:frame()
+
+    for _, win in ipairs(hs.window.allWindows()) do
+      if win:isStandard() then
+        local f = win:frame()
+        f.x = frame.x + (frame.w / 2) - (f.w / 2)
+        f.y = frame.y + (frame.h / 2) - (f.h / 2)
+        win:setFrame(f)
+      end
+    end
+    hs.alert.show("Windows recovered 🔥")
   end)
 
   -- Send the window to the workspace using Alt + Shift + Number
@@ -253,13 +298,13 @@ hs.hotkey.bind({ "alt" }, "space", function()
   end
 end)
 
-hs.hotkey.bind({ "alt" }, "N", function()
+hs.hotkey.bind({ "alt" }, "[", function()
   if hs.spotify.isPlaying() then
     hs.spotify.next()
   end
 end)
 
-hs.hotkey.bind({ "alt" }, "P", function()
+hs.hotkey.bind({ "alt" }, "]", function()
   if hs.spotify.isPlaying() then
     hs.spotify.next()
   end
