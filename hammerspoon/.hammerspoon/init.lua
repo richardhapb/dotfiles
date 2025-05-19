@@ -326,3 +326,35 @@ end)
 hs.timer.doAfter(0.5, function()
   showWorkspace(currentWorkspace)
 end)
+
+hs.application.enableSpotlightForNameSearches(true)
+
+hs.hotkey.bind({ "alt" }, "/", function()
+  local _, taskName = hs.dialog.textPrompt("Insert the task", "Task to do it", "work")
+  if not taskName then return end
+
+  local jnPath = "/Users/richard/.local/bin/jn"
+
+  -- Show initial notification through Hammerspoon
+  hs.alert.show("Starting timer for: " .. taskName)
+
+  local task = hs.task.new(jnPath,
+    function(exitCode, _, stdErr)
+      if exitCode ~= 0 then
+        hs.alert.show("Task failed: " .. (stdErr or "Unknown error"))
+        return
+      end
+      -- Show completion notification through Hammerspoon
+      hs.notify.show(
+        "Time has been finalized",
+        taskName,
+        "Task completed"
+      )
+    end,
+    { "1h", "break", taskName }
+  )
+
+  if not task:start() then
+    hs.alert.show("Failed to start task")
+  end
+end)
