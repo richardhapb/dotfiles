@@ -53,6 +53,17 @@ windowsPosition = setmetatable(windowsPosition, {
   end
 })
 
+focusedWindow = setmetatable(focusedWindow, {
+  __index = function(t, k)
+    local v = rawget(t, k)
+    if v then
+      return v
+    end
+
+    return hs.window.focusedWindow()
+  end
+})
+
 -- Save current workspace mapping to file
 local function saveWorkspaceData(data)
   local encoded = hs.json.encode(data)
@@ -330,7 +341,10 @@ end)
 hs.application.enableSpotlightForNameSearches(true)
 
 hs.hotkey.bind({ "alt" }, "/", function()
-  local _, taskName = hs.dialog.textPrompt("Insert the task", "Task to do it", "work")
+  local b, taskName = hs.dialog.textPrompt("Insert the task", "Task to do it", "work", "OK", "Cancel")
+  if b == "Cancel" then
+    return
+  end
   if not taskName then return end
 
   local jnPath = "/Users/richard/.local/bin/jn"
@@ -357,4 +371,6 @@ hs.hotkey.bind({ "alt" }, "/", function()
   if not task:start() then
     hs.alert.show("Failed to start task")
   end
+
+  focusedWindow[currentWorkspace]:focus()
 end)
