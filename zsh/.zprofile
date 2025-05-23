@@ -117,6 +117,9 @@ export SYSTEMD_EDITOR="$HOME/nvim/bin/nvim"
 
 eval "$(fnm env --use-on-cd --shell zsh)"
 
+export LUA_PATH="./?.lua;/usr/local/share/lua/5.4/?.lua;$HOME/.luarocks/share/lua/5.4/?.lua;;"
+export LUA_CPATH="./?.so;/usr/local/lib/lua/5.4/?.so;$HOME/.luarocks/lib/lua/5.4/?.so;;"
+
 export HISTSIZE=100000
 export HISTFILESIZE=100000
 export HISTCONTROL=ignoredups:ignorespace
