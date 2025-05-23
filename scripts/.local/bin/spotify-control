@@ -67,6 +67,21 @@ def execute_command_on_spotify_dbus(spotify_dbus, command, command_args=None):
     if command_args is None:
         command_args = []
 
+    # Special handling for Volume property
+    if command == 'Volume':
+        current_vol = spotify_dbus.Volume
+        if len(command_args) == 1:
+            if command_args[0] == 'up':
+                new_vol = min(1.0, current_vol + 0.1)
+            elif command_args[0] == 'down':
+                new_vol = max(0.0, current_vol - 0.1)
+            else:
+                try:
+                    new_vol = float(command_args[0])
+                except ValueError:
+                    raise ValueError("Volume must be a number between 0 and 1, or 'up'/'down'")
+            command_args = [max(0.0, min(1.0, new_vol))]  # Clamp between 0 and 1
+
     attr = getattr(spotify_dbus, command)
 
     if callable(attr):

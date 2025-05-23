@@ -73,6 +73,8 @@ bindsym $mod+slash exec --no-startup-id ~/.local/bin/init_task
 bindsym $mod+space exec --no-startup-id ~/.local/bin/spotify-control PlayPause
 bindsym $mod+bracketleft exec --no-startup-id ~/.local/bin/spotify-control Previous
 bindsym $mod+bracketright exec --no-startup-id ~/.local/bin/spotify-control Next
+bindsym $mod+Up exec --no-startup-id ~/.local/bin/spotify-control Volume up
+bindsym $mod+Down exec --no-startup-id ~/.local/bin/spotify-control Volume down
 
 # Only laptop screen
 bindsym $mod+Shift+n exec --no-startup-id ~/.screenlayout/laptop.sh
@@ -97,7 +99,9 @@ floating_modifier $mod
 tiling_drag modifier titlebar
 
 # start a terminal
-bindsym $mod+Return exec ghostty
+#
+set $terminal /usr/bin/ghostty
+bindsym $mod+Return exec --no-startup-id $terminal
 
 # kill focused window
 bindsym $mod+Shift+q kill
