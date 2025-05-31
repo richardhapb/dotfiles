@@ -340,17 +340,19 @@ end)
 
 hs.application.enableSpotlightForNameSearches(true)
 
-hs.hotkey.bind({ "alt" }, "/", function()
-  local b, taskName = hs.dialog.textPrompt("Insert the task", "Task to do it", "work", "OK", "Cancel")
-  if b == "Cancel" then
+---Init a just-notify instance associated to category
+---@param category string
+local function initJn(category)
+  local b, description = hs.dialog.textPrompt("[" .. category .. "] Insert the description", "Task to do it", "", "OK", "Cancel")
+  if b == "Cancel" or not description then
+    focusedWindow[currentWorkspace]:focus()
     return
   end
-  if not taskName then return end
 
   local jnPath = "/Users/richard/.local/bin/jn"
 
   -- Show initial notification through Hammerspoon
-  hs.alert.show("Starting timer for: " .. taskName)
+  hs.alert.show("Starting timer for: " .. category)
 
   local task = hs.task.new(jnPath,
     function(exitCode, _, stdErr)
@@ -361,11 +363,11 @@ hs.hotkey.bind({ "alt" }, "/", function()
       -- Show completion notification through Hammerspoon
       hs.notify.show(
         "Time has been finalized",
-        taskName,
+        description,
         "Task completed"
       )
     end,
-    { "1h", "break", taskName }
+    { "-t", "1h", "-c", category, "-n", "break", "-c", "programming", "-d", "-l", description }
   )
 
   if not task:start() then
@@ -373,4 +375,24 @@ hs.hotkey.bind({ "alt" }, "/", function()
   end
 
   focusedWindow[currentWorkspace]:focus()
+end
+
+
+hs.hotkey.bind({ "alt" }, "/", function()
+  initJn("programming")
+end)
+
+hs.hotkey.bind({ "alt" }, ".", function()
+  initJn("work")
+end)
+
+hs.hotkey.bind({ "alt" }, ",", function()
+  local b, category = hs.dialog.textPrompt("Insert category", "Indicate topic", "work", "OK", "Cancel")
+
+  if b == "Cancel" or not category then
+    focusedWindow[currentWorkspace]:focus()
+    return
+  end
+
+  initJn(category)
 end)
