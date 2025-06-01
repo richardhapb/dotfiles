@@ -76,6 +76,9 @@ bindsym $mod+bracketright exec --no-startup-id ~/.local/bin/spotify-control Next
 bindsym $mod+Up exec --no-startup-id ~/.local/bin/spotify-control Volume up
 bindsym $mod+Down exec --no-startup-id ~/.local/bin/spotify-control Volume down
 
+# Filesystem
+bindsym $mod+e exec --no-startup-id thunar
+
 # Only laptop screen
 bindsym $mod+Shift+n exec --no-startup-id ~/.screenlayout/laptop.sh
 
