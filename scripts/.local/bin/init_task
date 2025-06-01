@@ -1,26 +1,29 @@
 #!/usr/bin/env bash
 
+category=$1
+
+if [[ "$category" == "" ]]; then
+    category="work"
+fi
+
 # Get task name using either rofi or zenity
 if command -v zenity >/dev/null 2>&1; then
-    task_name=$(zenity --entry --title="Insert the task" --text="Task to do it" --entry-text="work")
+    description=$(zenity --entry --title="Insert the description" --text="Task to do it" --entry-text="")
 elif command -v rofi >/dev/null 2>&1; then
-    task_name=$(rofi -dmenu -p "Enter task name" -lines 0)
+    description=$(rofi -dmenu -p "Enter task name" -lines 0)
 else
     exit 1
 fi
 
-# Exit if no task name provided
-[ -z "$task_name" ] && exit 1
-
 # Show notification
-notify-send "Starting timer for: $task_name"
+notify-send "Starting timer for: $description"
 
 # Run jn command
-~/.local/bin/jn 1h break "$task_name"
+~/.local/bin/jn -t 1h -c "$category" -n break -l "$description" -d
 
 # Check exit status
 if [ $? -eq 0 ]; then
-    notify-send "Time has been finalized" "$task_name" "Task completed"
+    notify-send "Time has been finalized" "$description" "Task completed"
 else
     notify-send "Task failed" "Error running timer"
 fi

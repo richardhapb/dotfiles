@@ -69,7 +69,8 @@ bindsym Ctrl+$mod+Print exec --no-startup-id maim --format=png --window $(xdotoo
 bindsym Ctrl+Shift+Print exec --no-startup-id maim --format=png --select | xclip -selection clipboard -t image/png
 
 # Custom commands
-bindsym $mod+slash exec --no-startup-id ~/.local/bin/init_task
+bindsym $mod+slash exec --no-startup-id ~/.local/bin/init_task programming
+bindsym $mod+period exec --no-startup-id ~/.local/bin/init_task work
 bindsym $mod+space exec --no-startup-id ~/.local/bin/spotify-control PlayPause
 bindsym $mod+bracketleft exec --no-startup-id ~/.local/bin/spotify-control Previous
 bindsym $mod+bracketright exec --no-startup-id ~/.local/bin/spotify-control Next
