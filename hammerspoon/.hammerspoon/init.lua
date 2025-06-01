@@ -367,7 +367,7 @@ local function initJn(category)
         "Task completed"
       )
     end,
-    { "-t", "1h", "-c", category, "-n", "break", "-c", "programming", "-d", "-l", description }
+    { "-t", "1h", "-c", category, "-n", "break", "-d", "-l", description }
   )
 
   if not task:start() then
