@@ -357,7 +357,7 @@ local function initJn(category)
   local task = hs.task.new(jnPath,
     function(exitCode, _, stdErr)
       if exitCode ~= 0 then
-        hs.alert.show("Task failed: " .. (stdErr or "Unknown error"))
+        hs.alert.show("Task failed: " .. (stdErr or "Unknown error"), nil, nil, 5)
         return
       end
       -- Show completion notification through Hammerspoon
