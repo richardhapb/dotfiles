@@ -343,7 +343,8 @@ hs.application.enableSpotlightForNameSearches(true)
 ---Init a just-notify instance associated to category
 ---@param category string
 local function initJn(category)
-  local b, description = hs.dialog.textPrompt("[" .. category .. "] Insert the description", "Task to do it", "", "OK", "Cancel")
+  local b, description = hs.dialog.textPrompt("[" .. category .. "] Insert the description", "Task to do it", "", "OK",
+    "Cancel")
   if b == "Cancel" or not description then
     focusedWindow[currentWorkspace]:focus()
     return
@@ -354,29 +355,31 @@ local function initJn(category)
   -- Show initial notification through Hammerspoon
   hs.alert.show("Starting timer for: " .. category)
 
-  local task = hs.task.new(jnPath,
-    function(exitCode, _, stdErr)
-      if exitCode ~= 0 then
-        hs.alert.show("Task failed: " .. (stdErr or "Unknown error"), nil, nil, 5)
-        return
-      end
-      -- Show completion notification through Hammerspoon
+  local cmd = string.format("nohup %s -t 1h -c %q -n break -d -l %q > /tmp/jn.log 2>&1 &", jnPath, category, description)
+
+  local ok = hs.task.new("/bin/sleep", function(exitCode, _, _)
+    -- Show completion notification through Hammerspoon only when sleep completes
+    if exitCode == 0 then
       hs.notify.show(
         "Time has been finalized",
         description,
         "Task completed"
       )
-    end,
-    { "-t", "1h", "-c", category, "-n", "break", "-d", "-l", description }
-  )
+    end
+  end, { "3600" }):start()
 
-  if not task:start() then
-    hs.alert.show("Failed to start task")
+  if not ok then
+    hs.alert.show("Error starting sleep command")
+  end
+
+  -- Execute the command - detached execution returns immediately
+  local _, status = hs.execute(cmd)
+  if not status then
+    hs.alert.show("Failed to start detached task")
   end
 
   focusedWindow[currentWorkspace]:focus()
 end
-
 
 hs.hotkey.bind({ "alt" }, "/", function()
   initJn("programming")
