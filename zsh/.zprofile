@@ -70,6 +70,7 @@ alias va="source .venv/bin/activate"
 alias ls="ls -G"
 alias ll="ls -lhaG"
 alias cdn='cd ~/.config/nvim'
+alias grep='grep --color=auto'
 
 # Git
 alias g='git'

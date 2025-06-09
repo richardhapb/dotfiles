@@ -80,6 +80,9 @@ bindsym $mod+Down exec --no-startup-id ~/.local/bin/spotify-control Volume down
 # Filesystem
 bindsym $mod+e exec --no-startup-id thunar
 
+# Drawing
+bindsym $mod+p exec --no-startup-id drawonscreen_rust
+
 # Only laptop screen
 bindsym $mod+Shift+n exec --no-startup-id ~/.screenlayout/laptop.sh
 
@@ -284,6 +287,7 @@ workspace $ws1 gaps outer 0px
 
 assign [class="^com.mitchellh.ghostty$"] $ws1
 assign [class="^Brave-browser$"] $ws2
+assign [class="^drawonscreen_rust$"] $ws4
 
 
 assign [class="Zathura"] $ws5

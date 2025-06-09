@@ -15,6 +15,9 @@ else
     exit 1
 fi
 
+# Exit if there is no description
+[ -z "$description" ] && exit 1
+
 # Show notification
 notify-send "Starting timer for: $description"
 
