@@ -155,7 +155,7 @@ local function showWorkspace(n)
     end
   end
 
-  hideObstinateWindows(n)
+  -- hideObstinateWindows(n)
   focusedWindow[n]:focus()
 end
 
@@ -172,26 +172,26 @@ local function assignWindowToWorkspace(n)
   end
 end
 
+-- Move all visible windows to the center of the screen
+hs.hotkey.bind({ "alt", "cmd" }, "r", function()
+  local screen = hs.screen.mainScreen()
+  local frame = screen:frame()
+
+  for _, win in ipairs(hs.window.allWindows()) do
+    if win:isStandard() then
+      local f = win:frame()
+      f.x = frame.x + (frame.w / 2) - (f.w / 2)
+      f.y = frame.y + (frame.h / 2) - (f.h / 2)
+      win:setFrame(f)
+    end
+  end
+  hs.alert.show("Windows recovered 🔥")
+end)
+
 -- Change the workspace using Alt + Number
 for i = 1, maxWorkspaces do
   hs.hotkey.bind({ "alt" }, tostring(i), function()
     showWorkspace(i)
-  end)
-
-  -- Move all visible windows to the center of the screen
-  hs.hotkey.bind({ "alt", "cmd" }, "r", function()
-    local screen = hs.screen.mainScreen()
-    local frame = screen:frame()
-
-    for _, win in ipairs(hs.window.allWindows()) do
-      if win:isStandard() then
-        local f = win:frame()
-        f.x = frame.x + (frame.w / 2) - (f.w / 2)
-        f.y = frame.y + (frame.h / 2) - (f.h / 2)
-        win:setFrame(f)
-      end
-    end
-    hs.alert.show("Windows recovered 🔥")
   end)
 
   -- Send the window to the workspace using Alt + Shift + Number
