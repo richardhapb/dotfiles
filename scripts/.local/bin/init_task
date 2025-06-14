@@ -8,7 +8,7 @@ fi
 
 # Get task name using either rofi or zenity
 if command -v zenity >/dev/null 2>&1; then
-    description=$(zenity --entry --title="Insert the description" --text="Task to do it" --entry-text="")
+    description=$(zenity --entry --title="[$category] Insert the description" --text="Task to do it" --entry-text="")
 elif command -v rofi >/dev/null 2>&1; then
     description=$(rofi -dmenu -p "Enter task name" -lines 0)
 else

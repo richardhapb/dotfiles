@@ -288,7 +288,5 @@ workspace $ws1 gaps outer 0px
 assign [class="^com.mitchellh.ghostty$"] $ws1
 assign [class="^Brave-browser$"] $ws2
 assign [class="^drawonscreen_rust$"] $ws4
-
-
 assign [class="Zathura"] $ws5
 
