@@ -297,40 +297,23 @@ end
 hs.hotkey.bind({ "cmd", "ctrl", "shift" }, "D", mouseHighlight)
 
 hs.hotkey.bind({ "alt" }, "space", function()
-  local state = hs.spotify.getPlaybackState()
-
-  if state == hs.spotify.state_paused or state == hs.spotify.state_stopped then
-    hs.spotify.play()
-    hs.alert.show("Playback resumed")
-    hs.spotify.displayCurrentTrack()
-  elseif state == hs.spotify.state_playing then
-    hs.spotify.pause()
-    hs.alert.show("Playback paused")
-  end
+  hs.execute("spotify_player playback play-pause", true)
 end)
 
 hs.hotkey.bind({ "alt" }, "[", function()
-  if hs.spotify.isPlaying() then
-    hs.spotify.next()
-  end
+  hs.execute("spotify_player playback previous", true)
 end)
 
 hs.hotkey.bind({ "alt" }, "]", function()
-  if hs.spotify.isPlaying() then
-    hs.spotify.next()
-  end
+  hs.execute("spotify_player playback next", true)
 end)
 
 hs.hotkey.bind({ "alt" }, "down", function()
-  if hs.spotify.isPlaying() then
-    hs.spotify.volumeDown()
-  end
+  hs.execute("spotify_player playback volume --offset -- -5", true)
 end)
 
 hs.hotkey.bind({ "alt" }, "up", function()
-  if hs.spotify.isPlaying() then
-    hs.spotify.volumeUp()
-  end
+  hs.execute("spotify_player playback volume --offset 5", true)
 end)
 
 -- Restore visible windows for the current workspace after reload
