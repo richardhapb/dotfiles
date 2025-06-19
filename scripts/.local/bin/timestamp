@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+
+set -e
+
+arg1=$1
+arg2=$2
+inverse=false
+TZ="America/Santiago"
+
+print_usage() {
+    echo "Usage: timestamp <time> [-i]"
+    echo "  time: Date/time in format YYYY-MM-DD HH:MM:SS or timestamp"
+    echo "  -i: Convert from timestamp to time"
+    echo "Examples:"
+    echo "  timestamp '2025-06-17 09:30:00'"
+    echo "  timestamp -i 1750132800"
+    exit 1
+}
+
+validate_input() {
+    local input=$1
+    if [[ $inverse == true ]]; then
+        [[ $input =~ ^[0-9]+$ ]] || { echo "Invalid timestamp format"; exit 1; }
+    else
+        # Basic date format validation
+        date -d "$input" >/dev/null 2>&1 || { echo "Invalid date format"; exit 1; }
+    fi
+}
+
+to_millis() {
+    seconds=$1
+    echo "$seconds * 1000" | bc
+}
+
+to_seconds() {
+    millis=$1
+    echo "$millis / 1000" | bc
+}
+
+[ -z "$arg1" ] && print_usage
+
+if [ "$arg1" = "-i" ]; then
+    inverse=true
+    timestr="$arg2"
+elif [ "$arg2" = "-i" ]; then
+    inverse=true
+    timestr="$arg1"
+else
+    timestr="$arg1"
+fi
+
+[ -z "$timestr" ] && print_usage
+validate_input "$timestr"
+
+if $inverse; then
+    seconds="$(to_seconds $timestr)"
+    TZ=$TZ date -d "@$seconds" +'%Y-%m-%d %H:%M:%S %z'
+else
+    to_millis $(TZ=$TZ date -d "$timestr" +%s)
+fi
+
