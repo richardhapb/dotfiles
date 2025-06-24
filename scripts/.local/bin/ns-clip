@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+text=""
+
+# Only source tmux_sessionizer if it exists.
+if [[ -f "$HOME/.tmux_sessionizer" ]]; then
+    source "$HOME/.tmux_sessionizer"
+fi
+
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    text="$(pbpaste)"
+elif [[ "$OSTYPE" == "linux-gnu" ]]; then
+    text="$(xclip -selection clipboard -o)"
+else
+    echo "Clipboard access not supported on this system." >&2
+    exit 1
+fi
+
+result="$(echo "$text" | neospeller --lang text)"
+
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    echo "$result" | pbcopy
+    terminal-notifier -title "Grammar reviewed! 👊" -message "Copied to clipboard"
+elif [[ "$OSTYPE" == "linux-gnu" ]]; then
+    echo "$result" | xclip -selection clipboard
+    notify-send "Grammar reviewed! 👊" "Copied to clipboard"
+fi
+
+

@@ -216,6 +216,11 @@ hs.hotkey.bind({ "alt" }, "j", function()
   hs.window.focusedWindow():moveOneScreenSouth()
 end)
 
+-- Neospeller
+hs.hotkey.bind({ "alt" }, "g", function()
+  hs.execute("~/.local/bin/ns-clip", true)
+end)
+
 --- Send the window in a specified direction
 ---@param position "l" | "r" | "t" | "b" | "f"
 local function resize_window(position)

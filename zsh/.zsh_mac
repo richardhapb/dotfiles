@@ -1,6 +1,12 @@
 eval "$(/opt/homebrew/bin/brew shellenv)"
 eval "$(/usr/libexec/path_helper)"
 
+# The next line updates PATH for the Google Cloud SDK.
+if [ -f '/Users/richard/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/richard/google-cloud-sdk/path.zsh.inc'; fi
+
+# The next line enables shell command completion for gcloud.
+if [ -f '/Users/richard/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/richard/google-cloud-sdk/completion.zsh.inc'; fi
+
 export ICLOUD="/Users/richard/Library/Mobile Documents/com~apple~CloudDocs"
 export IN="$HOME/Documents/Brain/Inbox"
 export DEV0="$HOME/Documents/Developer"
