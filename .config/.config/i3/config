@@ -77,11 +77,11 @@ bindsym $mod+g exec --no-startup-id "$HOME/.local/bin/ns-clip"
 # Custom commands
 bindsym $mod+slash exec --no-startup-id ~/.local/bin/init_task programming
 bindsym $mod+period exec --no-startup-id ~/.local/bin/init_task work
-bindsym $mod+space exec --no-startup-id ~/.cargo/bin/spotify_player playback play-pause
-bindsym $mod+bracketleft exec --no-startup-id ~/.cargo/bin/spotify_player playback previous
-bindsym $mod+bracketright exec --no-startup-id ~/.cargo/bin/spotify_player playback next
-bindsym $mod+Up exec --no-startup-id ~/.cargo/bin/spotify_player playback volume --offset 5
-bindsym $mod+Down exec --no-startup-id ~/.cargo/bin/spotify_player playback volume --offset -- -5 
+bindsym $mod+space exec --no-startup-id ~/.local/bin/spotify_player playback play-pause
+bindsym $mod+bracketleft exec --no-startup-id ~/.local/bin/spotify_player playback previous
+bindsym $mod+bracketright exec --no-startup-id ~/.local/bin/spotify_player playback next
+bindsym $mod+Up exec --no-startup-id ~/.local/bin/spotify_player playback volume --offset 5
+bindsym $mod+Down exec --no-startup-id ~/.local/bin/spotify_player playback volume --offset -- -5 
 
 # Filesystem
 bindsym $mod+e exec --no-startup-id thunar
@@ -292,7 +292,8 @@ workspace $ws1 gaps outer 0px
 
 # Layout
 
-assign [class="^com.mitchellh.ghostty$"] $ws1
+# assign [class="^com.mitchellh.ghostty$"] $ws1
+assign [class="^org.wezfurlong.wezterm$"] $ws1
 assign [class="^Brave-browser$"] $ws2
 assign [class="^drawonscreen_rust$"] $ws4
 assign [class="Zathura"] $ws5
