@@ -11,6 +11,9 @@ exec --no-startup-id ~/.screenlayout/work.sh
 exec --no-startup-id ghostty
 exec --no-startup-id brave
 exec --no-startup-id xcompmgr -n
+# Drawings
+exec --no-startup-id gromit-mpx
+
 exec_always --no-startup-id setxkbmap -option compose:ralt
 exec_always --no-startup-id ~/.screenlayout/wallpaper.sh
 
@@ -85,6 +88,7 @@ bindsym $mod+e exec --no-startup-id thunar
 
 # Drawing
 bindsym $mod+p exec --no-startup-id drawonscreen_rust
+
 
 # Only laptop screen
 bindsym $mod+Shift+n exec --no-startup-id ~/.screenlayout/laptop.sh
