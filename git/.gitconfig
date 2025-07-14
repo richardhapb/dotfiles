@@ -23,8 +23,8 @@
     pof = remote prune origin
 [init]
     defaultBranch = main
-[includeif "gitdir:~/dev/"]
-    path = ~/configs/.gitconfig-work
+[includeif "gitdir:$HOME/dev/**"]
+    path = $HOME/configs/.gitconfig-work
 [rerere]
     enabled = true
 
