@@ -1,0 +1,6 @@
+
+container = "$PARENT-web-1"
+local_path = "$CWD/app"
+docker_internal_path = "/usr/src/app"
+executable = "pyright-langserver"
+pattern = "$HOME/dev/"

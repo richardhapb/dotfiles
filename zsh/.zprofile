@@ -68,7 +68,7 @@ alias d="cd $DEV"
 alias cdd='cd ~/dev'
 alias va="source .venv/bin/activate"
 alias ls="ls -G"
-alias ll="ls -lhaG"
+alias ll="ls -lhAG"
 alias cdn='cd ~/.config/nvim'
 alias grep='grep --color=auto'
 
@@ -122,6 +122,7 @@ export LUA_PATH="./?.lua;/usr/local/share/lua/5.4/?.lua;$HOME/.luarocks/share/lu
 export LUA_CPATH="./?.so;/usr/local/lib/lua/5.4/?.so;$HOME/.luarocks/lib/lua/5.4/?.so;;"
 
 export TERMINAL=/usr/bin/ghostty
+export RAINFROG_CONFIG=~/.config/rainfrog
 
 export HISTSIZE=100000
 export HISTFILESIZE=100000

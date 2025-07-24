@@ -1,0 +1,6 @@
+[db]
+ddirt-local = { host = "localhost", driver = "postgres", port = 5434, database = "dirtystroke_dev", username = "ddirt" }
+ddirt-local-analytics = { host = "localhost", driver = "postgres", port = 5434, database = "ddirt-analytics", username = "ddirt" }
+agora-local = { host = "localhost", driver = "postgres", port = 5432, database = "agorahedge_dev", username = "agorahedge" }
+ddirt-prod = { host = "localhost", driver = "postgres", port = 5444, database = "dirtystroke", username = "ddirt" }
+jn = { host = "100.125.234.126", driver = "postgres", port = 5432, database = "jn", username = "richard" }
