@@ -64,9 +64,7 @@ xterm*|rxvt*)
     ;;
 esac
 
-if [ -z "$SSH_AUTH_SOCK" ]; then
-    eval $(ssh-agent -s) &> /dev/null
-fi
+eval $(ssh-agent -s) &> /dev/null
 
 # enable color support of ls and also add handy aliases
 if [ -x /usr/bin/dircolors ]; then
