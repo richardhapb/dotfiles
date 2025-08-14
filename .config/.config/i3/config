@@ -8,11 +8,11 @@
 exec --no-startup-id xrdb -merge ~/.Xresources
 exec --no-startup-id /usr/libexec/gsd-xsettings
 exec --no-startup-id ~/.screenlayout/work.sh
-exec --no-startup-id ghostty
+exec --no-startup-id wezterm
 exec --no-startup-id brave
 exec --no-startup-id xcompmgr -n
 # Drawings
-exec --no-startup-id gromit-mpx
+exec_always --no-startup-id gromit-mpx
 
 exec_always --no-startup-id setxkbmap -option compose:ralt
 exec_always --no-startup-id ~/.screenlayout/wallpaper.sh

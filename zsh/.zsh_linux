@@ -64,7 +64,9 @@ xterm*|rxvt*)
     ;;
 esac
 
-eval $(ssh-agent -s) &> /dev/null
+if command -v keychain &> /dev/null; then
+    eval $(keychain --eval --quiet id_ed25519 syzlab_id_rsa "$HOME/dev/ddirt/staging/.ssh/ddirt_production_and_staging_root" "$HOME/dev/ssh_agora")
+fi
 
 # enable color support of ls and also add handy aliases
 if [ -x /usr/bin/dircolors ]; then
