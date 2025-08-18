@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+ssh agora docker compose --file /root/agora_hedge/docker-compose.prod.yml restart
