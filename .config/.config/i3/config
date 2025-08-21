@@ -62,9 +62,9 @@ bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOU
 # sudo pacman -S maim xclip xdotool
 
 ##  Screenshots in files
-bindsym Print exec --no-startup-id maim --format=png "/home/$USER/screenshots/screenshot-$(date -u +'%Y%m%d-%H%M%SZ')-all.png"
-bindsym $mod+Print exec --no-startup-id maim --format=png --window $(xdotool getactivewindow) "/home/$USER/screenshots/screenshot-$(date -u +'%Y%m%d-%H%M%SZ')-current.png"
-bindsym Shift+Print exec --no-startup-id maim --format=png --select "/home/$USER/screenshots/screenshot-$(date -u +'%Y%m%d-%H%M%SZ')-selected.png"
+bindsym Print exec --no-startup-id maim --format=png "/home/$USER/things/screenshots/screenshot-$(date -u +'%Y%m%d-%H%M%SZ')-all.png"
+bindsym $mod+Print exec --no-startup-id maim --format=png --window $(xdotool getactivewindow) "/home/$USER/things/screenshots/screenshot-$(date -u +'%Y%m%d-%H%M%SZ')-current.png"
+bindsym Shift+Print exec --no-startup-id maim --format=png --select "/home/$USER/things/screenshots/screenshot-$(date -u +'%Y%m%d-%H%M%SZ')-selected.png"
 
 ## Screenshots in clipboard
 bindsym Ctrl+Print exec --no-startup-id maim --format=png | xclip -selection clipboard -t image/png
