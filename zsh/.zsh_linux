@@ -106,8 +106,6 @@ alias wezterm='flatpak run org.wezfurlong.wezterm'
 export JAVA_HOME=$(readlink -f /usr/bin/javac | sed "s:/bin/javac::")
 export JAVA_TOOL_OPTIONS="-Djdk.xml.totalEntitySizeLimit=2000000 --enable-native-access=ALL-UNNAMED"
 
-export PATH=$PATH:/home/richard/pycharm-2024.3/bin
-export PATH=$PATH:/usr/lib/snap
 export PATH=$PATH:/opt/nvim-linux64/bin
 
 if [ -d "$HOME/proj" ]; then
