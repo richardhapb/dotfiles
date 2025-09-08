@@ -128,10 +128,10 @@ esac
 #
 
 # The next line updates PATH for the Google Cloud SDK.
-if [ -f '/home/richard/proj/gsh_auto/google-cloud-sdk/path.zsh.inc' ]; then . '/home/richard/proj/gsh_auto/google-cloud-sdk/path.zsh.inc'; fi
+if [ -f '/home/richard/gcloud/google-cloud-sdk/path.zsh.inc' ]; then . '/home/richard/gcloud/google-cloud-sdk/path.zsh.inc'; fi
 
 # The next line enables shell command completion for gcloud.
-if [ -f '/home/richard/proj/gsh_auto/google-cloud-sdk/completion.zsh.inc' ]; then . '/home/richard/proj/gsh_auto/google-cloud-sdk/completion.zsh.inc'; fi
+if [ -f '/home/richard/gcloud/google-cloud-sdk/completion.zsh.inc' ]; then . '/home/richard/gcloud/google-cloud-sdk/completion.zsh.inc'; fi
 
 alias open="xdg-open"
 
