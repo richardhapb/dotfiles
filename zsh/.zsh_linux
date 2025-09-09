@@ -64,10 +64,6 @@ xterm*|rxvt*)
     ;;
 esac
 
-# if command -v keychain &> /dev/null; then
-#     eval $(keychain --eval --quiet id_ed25519 syzlab_id_rsa "$HOME/dev/ddirt/staging/.ssh/ddirt_production_and_staging_root" "$HOME/dev/ssh_agora")
-# fi
-
 # enable color support of ls and also add handy aliases
 if [ -x /usr/bin/dircolors ]; then
     test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
@@ -125,7 +121,8 @@ case ":$PATH:" in
   *) export PATH="$PNPM_HOME:$PATH" ;;
 esac
 # pnpm end
-#
+
+eval "$(ssh-agent -s)" >/dev/null 2>&1
 
 # The next line updates PATH for the Google Cloud SDK.
 if [ -f '/home/richard/gcloud/google-cloud-sdk/path.zsh.inc' ]; then . '/home/richard/gcloud/google-cloud-sdk/path.zsh.inc'; fi

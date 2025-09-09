@@ -110,9 +110,9 @@ bindkey -s ^f "tmux-sessionizer\n"
 export NVIM="$HOME/.config/nvim"
 export DOTFILES="$HOME/dotfiles"
 
-export EDITOR="$HOME/nvim/bin/nvim"
-export VISUAL="$HOME/nvim/bin/nvim"
-export SYSTEMD_EDITOR="$HOME/nvim/bin/nvim"
+export EDITOR="nvim"
+export VISUAL="nvim"
+export SYSTEMD_EDITOR="nvim"
 
 . "$HOME/.cargo/env"
 
