@@ -19,7 +19,7 @@ eval "$(fnm env --use-on-cd)"
 source $(brew --prefix)/share/powerlevel10k/powerlevel10k.zsh-theme
 
 # SPARK
-export JAVA_HOME=$(brew --prefix java)@17 
+export JAVA_HOME=$(brew --prefix java)@24 
 export PATH=$JAVA_HOME/bin:$PATH
 export SPARK_HOME=$(brew --prefix apache-spark)/libexec
 export PATH=$SPARK_HOME/bin:$PATH
@@ -30,10 +30,12 @@ export PATH=$PATH:"/Users/richard/texpresso/build"
 export PATH=$PATH:"/Users/richard/kanata"
 export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH:/Users/richard/mongodb/bin"
 export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
+export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
 
 # This ensures the use of gsed instead of the mac version of sed
 export PATH="/opt/homebrew/opt/gnu-sed/libexec/gnubin:$PATH"
 alias sed='gsed'
+alias find='gfind'
 
 export SNVIM="$DEV/cont/neovim"
 export PKG_CONFIG_PATH=$(brew --prefix zathura)/lib/pkgconfig:$PKG_CONFIG_PATH

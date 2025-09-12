@@ -134,6 +134,10 @@ end
 
 -- Move the windows to the current workspace
 local function showWorkspace(n)
+  if currentWorkspace == n then
+    return
+  end
+
   focusedWindow[currentWorkspace] = hs.window.focusedWindow()
 
   currentWorkspace = n
