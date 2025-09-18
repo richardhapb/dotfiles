@@ -120,6 +120,8 @@ export EDITOR="nvim"
 export VISUAL="nvim"
 export SYSTEMD_EDITOR="nvim"
 
+export NVIM_LOG_FILE=/tmp/nvim.log
+
 . "$HOME/.cargo/env"
 
 eval "$(fnm env --use-on-cd --shell zsh)"
