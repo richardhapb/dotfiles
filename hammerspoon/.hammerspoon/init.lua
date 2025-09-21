@@ -172,7 +172,6 @@ local function assignWindowToWorkspace(n)
     hs.alert.show("Window assigned to Workspace " .. n)
     saveWorkspaceData(workspaces)
     windowsPosition[id] = win:frame()
-    moveOffscreen(win)
   end
 end
 

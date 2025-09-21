@@ -70,7 +70,10 @@ end
 
 -- General configuration
 config.color_scheme = 'GitHub Dark'
-config.font = wezterm.font ('JetBrains Mono', {weight="DemiBold"})
+config.font = wezterm.font_with_fallback {
+  {family='Monaspace Neon', weight="Medium"},
+  {family='JetBrains Mono', weight="DemiBold"},
+}
 config.font_size = 13
 config.window_background_image_hsb = {
    brightness = 0.1
