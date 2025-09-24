@@ -70,7 +70,7 @@ if command -v pyenv >/dev/null; then
     eval "$(pyenv init --path)"
 fi
 
-alias d="cd $DEV"
+alias dd="cd $DEV"
 alias cdd='cd ~/dev'
 alias va="source .venv/bin/activate"
 alias ls="ls -G"
@@ -108,8 +108,12 @@ alias gcl='git clone'
 alias gf='git fetch'
 alias gm='git merge'
 
-alias h='eval $(history 0 | sed -E "s/\s*[0-9]+\s+//" | sort | uniq | fzf)'
+alias h='eval $(history 0 | sort -r | sed -E "s/\s*[0-9]+\s+//" | uniq | fzf)'
 alias v="nvim"
+alias f='fd --type f --strip-cwd-prefix --hidden --follow --exclude .git | fzf --preview "bat --style=numbers --color=always --line-range :500 {}" | xargs -r nvim'
+d() { local dir=$(fd --type d --strip-cwd-prefix --hidden --follow --exclude .git | fzf --preview "ls -lhAG {}"); [ -n "$dir" ] && cd "$dir" }
+alias dl='docker ps --format "{{.Names}}" | fzf --preview "docker logs -n 1000 {}" | xargs -r -I {} docker logs -n 1000 -f {}'
+alias dt='docker ps --format "{{.Names}}" | fzf --preview "docker logs -n 1000 {}" | xargs -r -I {} docker exec -it {} bash'
 
 bindkey -s ^f "tmux-sessionizer\n"
 
@@ -129,7 +133,7 @@ eval "$(fnm env --use-on-cd --shell zsh)"
 export LUA_PATH="./?.lua;/usr/local/share/lua/5.4/?.lua;$HOME/.luarocks/share/lua/5.4/?.lua;;"
 export LUA_CPATH="./?.so;/usr/local/lib/lua/5.4/?.so;$HOME/.luarocks/lib/lua/5.4/?.so;;"
 
-export TERMINAL=/usr/bin/ghostty
+export TERMINAL=wezterm
 export RAINFROG_CONFIG=~/.config/rainfrog
 
 export HISTSIZE=100000
