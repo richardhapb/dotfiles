@@ -86,6 +86,7 @@ alias gc='git commit'
 alias gcm='git commit -m'
 alias gca='git commit --amend'
 alias gp='git push'
+alias gpf='git push --force-with-lease'
 alias gpl='git pull --rebase'
 alias gco='git checkout'
 alias gb='git branch'
@@ -112,8 +113,63 @@ alias h='eval $(history 0 | sort -r | sed -E "s/\s*[0-9]+\s+//" | uniq | fzf)'
 alias v="nvim"
 alias f='fd --type f --strip-cwd-prefix --hidden --follow --exclude .git | fzf --preview "bat --style=numbers --color=always --line-range :500 {}" | xargs -r nvim'
 d() { local dir=$(fd --type d --strip-cwd-prefix --hidden --follow --exclude .git | fzf --preview "ls -lhAG {}"); [ -n "$dir" ] && cd "$dir" }
-alias dl='docker ps --format "{{.Names}}" | fzf --preview "docker logs -n 1000 {}" | xargs -r -I {} docker logs -n 1000 -f {}'
-alias dt='docker ps --format "{{.Names}}" | fzf --preview "docker logs -n 1000 {}" | xargs -r -I {} docker exec -it {} bash'
+alias dl='docker ps -a --format "{{.State}} | {{.Names}}" | fzf --preview "docker logs -n 1000 {+2}" | awk -F"|" "{print \$2}" | xargs -r docker logs -n 1000 -f'
+dt() { container=$(docker ps --format "{{.Names}}" | fzf --preview "docker logs -n 1000 {}") && [ -n "$container" ] && docker exec -it "$container" bash; }
+dx() {
+    local prefix=$1
+    if [ -z "$prefix" ]; then
+        echo "prefix is required"
+        return 1
+    fi
+
+    local stopped=0
+
+    set +m
+    for container in $(docker ps --format "{{.Names}}"); do
+        if [[ "$container" == "$prefix"* ]]; then
+            echo "Stopping $container"
+            docker stop "$container" &
+            stopped=$((stopped+1))
+        fi
+    done
+
+    if [ "$stopped" -gt 0 ]; then
+        echo "Waiting for containers to stop..."
+        wait
+        set -m
+        echo "Containers stopped"
+    else
+        echo "Nothing to stop"
+    fi
+}
+
+dr() {
+    local prefix=$1
+    if [ -z "$prefix" ]; then
+        echo "prefix is required"
+        return 1
+    fi
+
+    local started=0
+
+    set +m
+    for container in $(docker ps -a --filter "status=exited" --format "{{.Names}}"); do
+        if [[ "$container" == "$prefix"* ]]; then
+            echo "Starting $container"
+            docker start "$container" &
+            started=$((started+1))
+        fi
+    done
+
+    if [ "$started" -gt 0 ]; then
+        echo "Waiting for containers to start..."
+        wait
+        set -m
+        echo "Containers started"
+    else
+        echo "Nothing to start"
+    fi
+}
 
 bindkey -s ^f "tmux-sessionizer\n"
 
