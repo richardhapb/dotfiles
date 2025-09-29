@@ -4,6 +4,7 @@
 [core]
     autocrlf = input
     fileMode = false
+    excludesfile = ~/.gitignore_global
 [push]
     default = current
 [submodule]
