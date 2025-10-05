@@ -6,6 +6,8 @@ hs.hotkey.bind({ "alt", "shift" }, "r", function()
   hs.reload()
 end)
 
+hs.window.animationDuration = 0
+
 local currentWorkspace = 1 -- must be initialized explicitly
 local workspaceDataFile = os.getenv("HOME") .. "/.hammerspoon/workspaces.json"
 local json = hs.json

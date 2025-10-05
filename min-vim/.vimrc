@@ -1,5 +1,16 @@
 set number
 set relativenumber
+set smartindent
+set smarttab
+set expandtab
+set noswapfile
+
+set ignorecase
+set smartcase
+set nowrap
+set incsearch
+set hlsearch
+
 syntax on
 
 function! IsRaspberryPi()

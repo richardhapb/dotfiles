@@ -195,3 +195,6 @@ export RAINFROG_CONFIG=~/.config/rainfrog
 export HISTSIZE=100000
 export HISTFILESIZE=100000
 export HISTCONTROL=ignoredups:ignorespace
+
+setopt INTERACTIVE_COMMENTS
+
