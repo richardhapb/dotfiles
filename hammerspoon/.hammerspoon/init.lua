@@ -103,37 +103,6 @@ local function moveOffscreen(win)
   win:setFrame(f)
 end
 
---- Hide all windows of an app if the app is not focused
----@param appName string
-local function forceHideApp(appName)
-  local script = string.format([[
-    tell application "System Events"
-      set visible of process "%s" to false
-    end tell
-  ]], appName)
-  hs.osascript.applescript(script)
-end
-
-local function hideObstinateWindows(n)
-  local appsToHide = { "Spotify", "Finder", "Brave", "ChatGPT" }
-
-  for _, appName in ipairs(appsToHide) do
-    local hide = true
-
-    local app = hs.application.get(appName)
-    if not app then goto continue end
-
-    for _, win in ipairs(app:visibleWindows() or {}) do
-      if workspaces[tostring(win:id())] == n then
-        hide = false
-        break
-      end
-    end
-    if hide then forceHideApp(appName) end
-    ::continue::
-  end
-end
-
 -- Move the windows to the current workspace
 local function showWorkspace(n)
   if currentWorkspace == n then
@@ -266,6 +235,50 @@ local function resize_window(position)
 
   win:setFrame(f)
 end
+
+hs.hotkey.bind({ "alt", "shift" }, "p", function()
+  local drawing_path = os.getenv("HOME") .. "/proj/cont/drawonscreen_rust/target/release/drawonscreen_rust"
+  local task = hs.task.new(drawing_path, function(code, stdout, stderr)
+    if code ~= 0 then
+      hs.notify.show("Rust drawonscreen", stderr)
+      return
+    end
+
+    if stdout ~= "" then
+      hs.notify.show("Rust drawonscreen", stdout)
+    end
+  end)
+
+  local prev_win = hs.window.focusedWindow()
+  local draw_win = nil
+  if task then
+    task:start()
+    local attempt = 0
+    while true do
+      hs.execute("sleep 0.2")
+      local win = hs.window.focusedWindow()
+      if win and win:title():find("Draw%sOn%sScreen") then
+        draw_win = win
+        break
+      end
+      if attempt >= 5 then
+        hs.notify.show("Error", "Cannot found the drawing window", "")
+        task:terminate()
+        return
+      end
+      attempt = attempt + 1
+    end
+    assignWindowToWorkspace(4)
+    if prev_win then
+      prev_win:focus()
+    end
+    showWorkspace(4)
+    if draw_win then
+      draw_win:focus()
+    end
+    resize_window("f")
+  end
+end)
 
 -- Snap the window to the left half of the screen
 hs.hotkey.bind({ "alt", "shift" }, "h", function() resize_window("l") end)
