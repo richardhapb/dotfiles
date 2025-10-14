@@ -36,6 +36,7 @@ export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
 export PATH="/opt/homebrew/opt/gnu-sed/libexec/gnubin:$PATH"
 alias sed='gsed'
 alias find='gfind'
+lman() { man -M ~/linux-man "$@" }
 
 export SNVIM="$DEV/cont/neovim"
 export PKG_CONFIG_PATH=$(brew --prefix zathura)/lib/pkgconfig:$PKG_CONFIG_PATH

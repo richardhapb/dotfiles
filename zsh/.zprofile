@@ -171,6 +171,20 @@ dr() {
     fi
 }
 
+n() {
+    printf "Title: "
+    read TITLE
+
+    if [ -z "$TITLE" ]; then
+        return
+    fi
+
+    dir=$NOTES/warlog
+    mkdir -p "$dir"
+
+    date +%Y%M%d | xargs -I{} nvim "${dir}/{}_${TITLE}.md"
+}
+
 bindkey -s ^f "tmux-sessionizer\n"
 
 export NVIM="$HOME/.config/nvim"
