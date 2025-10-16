@@ -1,0 +1,199 @@
+#!/usr/bin/env bash
+
+# To find the printer name on macOS, use: lpstat -p
+printer="HP_LaserJet_M111w__AF6A35_"
+
+# usage
+if [ $# -eq 0 ]  # no arguments given
+then
+    echo "Usage: lpd <F> [<S> <E> <M> <C>]"
+    echo "  F: file name"
+    echo "  S: start of page range to print"
+    echo "  E: end   of page range to print"
+    echo "  M: multipage: number of pages per side"
+    echo "  C: color mode: 'c': colored (default), 'g': gray scale"
+    echo "Either no or options, only S and R, or all options have to be provided."
+    echo "Examples:"
+    echo "  $ lpd example.pdf                # print example.pdf"
+    echo "  $ lpd example.pdf 4 10           # print example.pdf pages 4-10"
+    echo "  $ lpd example.pdf 4 10 2 g       # print example.pdf pages 4-10 with two pages per side in gray scale"
+    exit
+fi
+
+# Get number of pages
+filename=$1
+# Try mdls first (macOS native)
+num_pages=$(mdls -name kMDItemNumberOfPages "$filename" 2>/dev/null | awk -F' = ' '{print $2}')
+
+# If mdls fails or returns null, try alternative methods
+if [ -z "$num_pages" ] || [ "$num_pages" = "(null)" ]; then
+    # Check if we have pdfinfo installed via homebrew
+    if command -v pdfinfo &> /dev/null; then
+        num_pages=$(pdfinfo "$filename" | grep Pages | awk '{print $2}')
+    else
+        # Last resort: use macOS's sips command (less reliable for PDFs)
+        echo "Warning: Cannot accurately determine page count. Install pdfinfo via 'brew install poppler' for better results."
+        echo "Enter the total number of pages in the document:"
+        read num_pages
+    fi
+fi
+
+[ -z "$2" ] && start=1 || start=$2                       # start of page range (default: 1)
+[ -z "$3" ] && end=$num_pages || end=$3                  # end   of page range (default: num_pages)
+[ -z "$4" ] && multi=1 || multi=$4                       # pages per side (default: 1)
+([ -z "$5" ] || [ "$5" == "g" ]) && color=false || color=true  # color
+
+# get page ranges
+first=$(( ($start+$multi-1)/$multi ))                    # first multipage to print
+last=$(( ($end+$multi-1)/$multi ))                       # last  multipage to print
+start_=$(( (($first-1)*$multi)+1  ))                     # start of printed page range
+end_=$(( $last*$multi ))                                 # end   of printed page range
+num_sheets=$(( $last-$first+1 ))                         # number of output
+
+# sort into front, back and remainder pages
+front_=()
+back_=()
+
+i=1
+for ((p=first; p<=last; p++))
+do
+  if ((i % 2))
+  then
+      front_+=($p)  # odd multipages to front
+  else
+      # Insert at beginning to reverse the back pages order
+      # this allows reverse the full stack instead of each page individually
+      back_=(${p} ${back_[@]})
+  fi
+  i=$((i+1))
+done
+
+if [[ ${#back_[@]} -eq 0 ]]  # only single front page
+then
+  backpages=false
+  remainder=false
+else
+  backpages=true
+
+  if (( ${#front_[@]} > ${#back_[@]} ))  # more front than back pages
+  then
+      remainder=true
+  else
+      remainder=false
+  fi
+fi
+
+# convert page range to comma-separated string
+function join_by { local IFS="$1"; shift; echo "$*"; }
+front=$(join_by , "${front_[@]}")
+back=$(join_by , "${back_[@]}")
+
+# notify user of initialization
+echo "Duplex print"
+echo "File: $filename"
+echo "Page range: $start_-$end_"
+echo "Pages per sheet: $multi"
+echo "Number of sheets: $num_sheets"
+echo "Colored: $color"
+echo "Continue (Y/n)?"
+read confirm
+if [ "$(echo $confirm | awk '{print tolower($0)}')" != "y" ] && [ "$confirm" != "" ]
+then
+    echo "Cancelled"
+    exit 3
+fi
+echo "Printing ..."
+echo ""
+
+# execute print job
+send_print_job () {   # send print job and return job id
+    # $1: file name, $2: page range, $3: multi, $4: reverse, $5: color
+    if [[ $# -eq 0 ]]
+    then
+        # Send empty page for last backpage on macOS
+        echo "" | lp -d "$printer" 2>&1 | sed -n 's/request id is \([^ ]*\).*/\1/p'
+    else
+        printrequest="lp -d \"$printer\""  # basic print request with quoted printer name
+        printrequest+=" -o page-ranges=$2"  # page range
+        
+        # Multi-page setting
+        if [[ "$3" != "1" ]] && [[ "$3" != "false" ]]; then 
+            printrequest+=" -o number-up=$3"
+        
+        # Grayscale - macOS may use different syntax depending on printer
+        if [[ "$4" = false ]]; then 
+            printrequest+=" -o ColorModel=Gray"  # Most common on macOS
+        fi
+        
+        printrequest+=" \"$1\""  # file name with quotes
+        
+        # Execute and extract job ID
+        eval $printrequest 2>&1 | sed -n 's/request id is \([^ ]*\).*/\1/p'
+    fi
+}
+
+# monitor print job status
+monitor_print_job () {
+    # $1: job id
+    local completed=false
+    local max_attempts=60  # timeout after 5 minutes
+    local attempts=0
+    
+    until $completed
+    do
+        sleep 5  # check every 5 seconds
+        
+        # macOS lpstat syntax
+        completed_jobs=$(lpstat -W completed 2>/dev/null | grep "$printer" | awk '{print $1}')
+        
+        if [[ "$completed_jobs" == *"$1"* ]]; then 
+            completed=true
+        fi
+        
+        # Also check if job disappeared from active queue
+        active_jobs=$(lpstat -o "$printer" 2>/dev/null | awk '{print $1}')
+        if [[ "$active_jobs" != *"$1"* ]] && [[ ! -z "$1" ]]; then
+            completed=true
+        fi
+        
+        # Timeout protection
+        attempts=$((attempts + 1))
+        if [ $attempts -ge $max_attempts ]; then
+            echo "Warning: Print job monitoring timed out"
+            completed=true
+        fi
+    done
+}
+
+main() {
+    # print front pages
+    echo "Printing front pages: $front"
+    front_job=$(send_print_job "$filename" "$front" "$multi" "$color")
+    echo "Front job ID: $front_job"
+    monitor_print_job "$front_job"
+
+    if [[ "$backpages" = true ]]
+    then
+        # prompt user to turn paper
+        echo "Please turn the paper stack and reinsert it into the tray, then press Enter."
+        read confirm
+
+        # print last empty back page first
+        if [[ "$remainder" = true ]]
+        then
+            echo "Printing empty remainder page"
+            remainder_job=$(send_print_job)
+            monitor_print_job "$remainder_job"
+        fi
+
+        # print back pages
+        echo "Printing back pages: $back"
+        back_job=$(send_print_job "$filename" "$back" "$multi" "$color")
+        echo "Back job ID: $back_job"
+        monitor_print_job "$back_job"
+    fi
+}
+
+main
+
+echo "Done"
