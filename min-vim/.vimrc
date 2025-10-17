@@ -13,6 +13,15 @@ set hlsearch
 
 syntax on
 
+" DIFF colors
+hi DiffAdd      ctermfg=NONE          ctermbg=DarkBlue
+hi DiffChange   ctermfg=NONE          ctermbg=NONE
+hi DiffDelete   ctermfg=LightBlue     ctermbg=Red
+hi DiffText     ctermfg=Yellow        ctermbg=Red
+
+
+colorscheme habamax
+
 function! IsRaspberryPi()
   if !filereadable('/proc/cpuinfo')
     return 0
@@ -51,4 +60,3 @@ if has('unix') || IsRaspberryPi() || IsSSH()
   set clipboard=unnamedplus
 
 endif
-
