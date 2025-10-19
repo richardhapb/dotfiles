@@ -185,6 +185,12 @@ n() {
     date +%Y%M%d | xargs -I{} nvim "${dir}/{}_${TITLE}.md"
 }
 
+docker_norestart() {
+    for container in $(docker ps -a --format '{{.Names}}'); do
+        docker update --restart no "$container"
+    done
+}
+
 bindkey -s ^f "tmux-sessionizer\n"
 
 export NVIM="$HOME/.config/nvim"
