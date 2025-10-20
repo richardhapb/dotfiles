@@ -86,6 +86,7 @@ ignore = [
 "*.ipynb" = [
     "E402", # Module level import not at top of file - common in notebooks
     "W391", # Blank line at end of file - notebooks often have trailing cells
+    "E302", # Expected ... blank lines
     "E303", # Too many blank lines - notebooks naturally have spacing
     "B018", # Found useless expression - notebooks often have expressions for output
     "F401", # Imported but unused - common in exploratory notebooks
