@@ -1,15 +1,25 @@
 set number
 set relativenumber
+
 set smartindent
 set smarttab
 set expandtab
 set noswapfile
+set autoindent
+set tabstop=4
+set softtabstop=4
+set shiftwidth=4
+
 
 set ignorecase
 set smartcase
 set nowrap
 set incsearch
 set hlsearch
+
+set autocomplete
+ 
+set clipboard^=unnamed,unnamedplus
 
 syntax on
 
@@ -19,44 +29,22 @@ hi DiffChange   ctermfg=NONE          ctermbg=NONE
 hi DiffDelete   ctermfg=LightBlue     ctermbg=Red
 hi DiffText     ctermfg=Yellow        ctermbg=Red
 
-
 colorscheme habamax
 
-function! IsRaspberryPi()
-  if !filereadable('/proc/cpuinfo')
-    return 0
-  endif
-  
-  let l:cpuinfo = readfile('/proc/cpuinfo')
-  
-  for line in l:cpuinfo
-    if line =~ 'Raspberry Pi'
-      return 1
-    endif
-  endfor
-  
-  return 0
-endfunction
+" Transparent
+hi Normal  ctermbg=NONE guibg=NONE
+hi NormalNC  ctermbg=NONE guibg=NONE
 
-function! IsSSH()
-  return !empty($SSH_CLIENT) || !empty($SSH_TTY)
-endfunction
+let mapleader = ' '
 
-if has('unix') || IsRaspberryPi() || IsSSH()
+nmap <silent> <C-j> <C-w><C-j>
+nmap <silent> <C-k> <C-w><C-k>
+nmap <silent> <C-h> <C-w><C-h>
+nmap <silent> <C-l> <C-w><C-l>
+nmap <silent> <BS> :Explore<CR>
+nmap <silent> sv :vsplit<CR><C-l>
+nmap <silent> ss :split<CR><C-j>
+nmap <silent> <leader><leader> :find<space>
 
-  let g:clipboard = {
-        \ 'name': 'ssh-clipboard',
-        \ 'copy': {
-        \   '+': ['nc', '-q0', 'localhost', '2224'],
-        \   '*': ['nc', '-q0', 'localhost', '2224'],
-        \ },
-        \ 'paste': {
-        \   '+': ['nc', '-q0', 'localhost', '2225'],
-        \   '*': ['nc', '-q0', 'localhost', '2225'],
-        \ },
-        \ 'cache_enabled': 1
-        \ }
 
-  set clipboard=unnamedplus
 
-endif

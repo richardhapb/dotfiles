@@ -130,5 +130,7 @@ if [ -f '/home/richard/gcloud/google-cloud-sdk/path.zsh.inc' ]; then . '/home/ri
 # The next line enables shell command completion for gcloud.
 if [ -f '/home/richard/gcloud/google-cloud-sdk/completion.zsh.inc' ]; then . '/home/richard/gcloud/google-cloud-sdk/completion.zsh.inc'; fi
 
+export PATH="/usr/local/bin:$PATH"
+
 alias open="xdg-open"
 
