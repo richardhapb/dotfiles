@@ -1,5 +1,6 @@
 set number
 set relativenumber
+set nocompatible
 
 set smartindent
 set smarttab
@@ -9,6 +10,7 @@ set autoindent
 set tabstop=4
 set softtabstop=4
 set shiftwidth=4
+set splitright
 
 
 set ignorecase
@@ -20,6 +22,15 @@ set hlsearch
 set autocomplete
  
 set clipboard^=unnamed,unnamedplus
+set encoding=utf-8
+
+" Enable folding
+set foldmethod=indent
+set foldlevel=99
+
+" Man files
+runtime! ftplugin/man.vim
+   
 
 syntax on
 
@@ -44,7 +55,27 @@ nmap <silent> <C-l> <C-w><C-l>
 nmap <silent> <BS> :Explore<CR>
 nmap <silent> sv :vsplit<CR><C-l>
 nmap <silent> ss :split<CR><C-j>
+nmap <silent> sa ggVG
 nmap <silent> <leader><leader> :find<space>
 
+" Python
 
+au BufNewFile,BufRead *.py {
+    set tabstop=4
+    set softtabstop=4
+    set shiftwidth=4
+    set textwidth=79
+    set expandtab
+    set autoindent
+    set fileformat=unix
+}
+
+py3 << EOF
+import os
+import sys
+if 'VIRTUAL_ENV' in os.environ:
+  project_base_dir = os.environ['VIRTUAL_ENV']
+  activate_this = os.path.join(project_base_dir, 'bin/activate_this.py')
+  exec(open(activate_this).read(), dict(__file__=activate_this))
+EOF
 
