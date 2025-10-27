@@ -61,6 +61,7 @@ ignore = [
     "ANN204", # Special methods
     "D102",   # Docstring in public method
     "D107",   # Docstring in __init__
+    "E402",  # Import in top-level
 ]
 
 # Per-file ignores
