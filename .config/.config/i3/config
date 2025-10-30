@@ -11,6 +11,7 @@ exec --no-startup-id ~/.screenlayout/work.sh
 exec --no-startup-id wezterm
 exec --no-startup-id brave
 exec --no-startup-id xcompmgr -n
+exec --no-startup-id p3x-onenote
 # Drawings
 exec_always --no-startup-id gromit-mpx
 
@@ -282,6 +283,9 @@ workspace $ws1 gaps outer 0px
 # assign [class="^com.mitchellh.ghostty$"] $ws1
 assign [class="^org.wezfurlong.wezterm$"] $ws1
 assign [class="^Brave-browser$"] $ws2
-assign [class="^drawonscreen_rust$"] $ws4
+assign [class="^p3x-onenote$"] $ws4
 assign [class="Zathura"] $ws5
+assign [class="^drawonscreen_rust$"] $ws10
+for_window [class="^Matplotlib$"] floating enable 
+for_window [class="^Matplotlib$"] resize set 540 380 
 
