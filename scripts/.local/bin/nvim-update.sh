@@ -27,5 +27,6 @@ fi
 
 git pull upstream master
 
-make CMAKE_INSTALL_PREFIX="$dest_dir" CMAKE_BUILD_TYPE=RelWithDebInfo install
+sudo rm -rf "$nvim_dir/{.deps,build}"
+sudo make CMAKE_INSTALL_PREFIX="$dest_dir" CMAKE_BUILD_TYPE=RelWithDebInfo install
 
