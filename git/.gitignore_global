@@ -3,5 +3,6 @@ _install.sh
 todo.md
 warlog.md
 ty.toml
+docker-compose.override.yml
 
 

@@ -1,0 +1,41 @@
+id: no-fstring-in-logging
+language: python
+rule:
+  any:
+    - pattern: $LOGGER.$METHOD($IDENTS)
+    # - pattern: $LOGGER.$METHOD($IDENTS, $$$KWARGS)
+constraints:
+  METHOD:
+    regex: ^(trace|debug|info|warning|warn|error|log)$
+  LOGGER:
+    any:
+      - kind: identifier
+      - kind: attribute
+  IDENTS:
+    regex: 'f"[^"]*"'
+rewriters:
+- id: rewrite-identifier
+  rule:
+    pattern: $VAR
+    any:
+      - kind: identifier
+      - kind: attribute
+  fix: $VAR
+transform:
+  ARGS:
+    rewrite:
+      rewriters: [rewrite-identifier]
+      source: $IDENTS
+      joinBy: ", "
+  MESSAGE:
+    replace:
+      source: $IDENTS
+      replace: 'f"([^"]*)"'
+      by: '"$1"'
+  FINAL_MESSAGE:
+    replace:
+      source: $MESSAGE
+      replace: '\{[^}]+\}'
+      by: '%s'
+# fix: $LOGGER.$METHOD($FINAL_MESSAGE, $ARGS, $$$KWARGS)
+fix: $LOGGER.$METHOD($FINAL_MESSAGE, $ARGS)

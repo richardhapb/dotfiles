@@ -12,7 +12,6 @@ export IN="$HOME/Documents/Brain/Inbox"
 export DEV0="$HOME/Documents/Developer"
 export DEV="$HOME/proj"
 export NOTES="$HOME/notes"
-# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 source $(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source $(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
 eval "$(fnm env --use-on-cd)"
@@ -36,6 +35,16 @@ export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
 export PATH="/opt/homebrew/opt/gnu-sed/libexec/gnubin:$PATH"
 alias sed='gsed'
 alias find='gfind'
+alias perf='gperf'
+help() { 
+    args="$@"
+    bash -c "help $args" 2> /dev/null
+
+    # Fallback to zsh
+    if [[ $? -ne 0 ]]; then
+        run-help "$args"
+    fi
+}
 lman() { man -M ~/linux-man "$@" }
 
 export SNVIM="$DEV/cont/neovim"

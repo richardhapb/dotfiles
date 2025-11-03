@@ -217,5 +217,4 @@ export HISTSIZE=100000
 export HISTFILESIZE=100000
 export HISTCONTROL=ignoredups:ignorespace
 
-setopt INTERACTIVE_COMMENTS
-
+setopt INTERACTIVE_COMMENTS  # Allow comments in shell
