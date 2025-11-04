@@ -1,10 +1,33 @@
+autoload -Uz vcs_info
+precmd() { vcs_info }
 
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-    source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
-typeset -g POWERLEVEL9K_INSTANT_PROMPT=off
-set editing-mode vi
+# Git branch info
+zstyle ':vcs_info:git:*' formats ' (%b)'
+zstyle ':vcs_info:*' enable git
+
+setopt PROMPT_SUBST
+
+# Two-line prompt: path on first line, symbol on second
+PROMPT='%F{blue}%~%f%F{yellow}${vcs_info_msg_0_}%f
+%F{green}❯%f '
+
+bindkey -v  # Enable vi mode
+export KEYTIMEOUT=1  # Reduce ESC delay from 400ms to 10ms
+
+# bash/emacs shortcuts in insert mode
+bindkey -M viins '^A' beginning-of-line
+bindkey -M viins '^E' end-of-line
+bindkey -M viins '^R' history-incremental-search-backward
+bindkey -M viins '^F' tmux-sessionizer
+bindkey -M viins '^K' kill-line
+bindkey -M viins '^U' backward-kill-line
+bindkey -M viins '^W' backward-kill-word
+bindkey -M viins '^Y' yank
+
+# Make backspace and delete work properly
+bindkey -M viins '^?' backward-delete-char
+bindkey -M viins '^H' backward-delete-char
+
 
 # Locals
 export LANG="en_US.UTF-8"
@@ -53,7 +76,6 @@ if [[ "$NEEDS_REGEN" == true ]]; then  # Cache Homebrew prefixes to avoid slow `
         echo "export LLVM_PATH=\"$(brew --prefix llvm)/bin\"" >> "$CACHE_FILE"
         echo "export ZSH_HIGHLIGHT_PATH=\"$HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh\"" >> "$CACHE_FILE"
         echo "export ZSH_SUGGESTIONS_PATH=\"$HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh\"" >> "$CACHE_FILE"
-        echo "export P10K_PATH=\"$HOMEBREW_PREFIX/share/powerlevel10k/powerlevel10k.zsh-theme\"" >> "$CACHE_FILE"
 
         # Compilation paths
         echo "export SDKROOT=\"$(xcrun --show-sdk-path)\"" >> "$CACHE_FILE"
@@ -218,3 +240,6 @@ export HISTFILESIZE=100000
 export HISTCONTROL=ignoredups:ignorespace
 
 setopt INTERACTIVE_COMMENTS  # Allow comments in shell
+
+
+
