@@ -5,6 +5,8 @@
     autocrlf = input
     fileMode = false
     excludesfile = ~/.gitignore_global
+[diff]
+    tool = nvimdiff
 [push]
     default = current
 [submodule]
