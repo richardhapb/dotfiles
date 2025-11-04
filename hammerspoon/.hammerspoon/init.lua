@@ -7,6 +7,25 @@ hs.hotkey.bind({ "alt", "shift" }, "r", function()
 end)
 
 hs.window.animationDuration = 0
+local hideDirection = "left"
+
+local function resolveHideDirection()
+  local screens = hs.screen.allScreens()
+
+  -- Multiple screens detected, then positione the hided
+  -- window at bottom instead than the left
+  if #screens > 1 then
+    hideDirection = "bottom"
+  else
+    hideDirection = "left"
+  end
+end
+
+resolveHideDirection()
+
+hs.screen.watcher.new(function()
+  resolveHideDirection()
+end)
 
 local currentWorkspace = 1 -- must be initialized explicitly
 local workspaceDataFile = os.getenv("HOME") .. "/.hammerspoon/workspaces.json"
@@ -92,20 +111,31 @@ end
 local function moveOffscreen(win)
   if not win then return end
   local f = win:frame()
+  local v = "x"
+  local s = -1
+  if hideDirection == "bottom" then
+    v = "y"
+    s = 1
 
-  if f.x < 0 then
+    if f[v] > 1000 then
+      return
+    end
+  end
+
+  if f[v] < 0 then
     return
   end
 
   local id = tostring(win:id())
   windowsPosition[id] = win:frame()
-  f.x = -5000
+  f[v] = 5000 * s
   win:setFrame(f)
 end
 
 -- Move the windows to the current workspace
 local function showWorkspace(n)
-  if currentWorkspace == n then
+  -- 0 is a frozen WS
+  if currentWorkspace == n or n == 0 then
     return
   end
 
@@ -125,7 +155,7 @@ local function showWorkspace(n)
         app:activate()
       end
       win:setFrame(savedFrame)
-    else
+    elseif workspaces[id] ~= 0 then
       moveOffscreen(win)
     end
   end
@@ -173,6 +203,12 @@ for i = 1, maxWorkspaces do
     assignWindowToWorkspace(i)
   end)
 end
+
+-- 0 is a frozen workspace, that will be no hidden
+hs.hotkey.bind({ "alt", "shift" }, tostring(0), function()
+  assignWindowToWorkspace(0)
+end)
+
 
 hs.hotkey.bind({ "alt" }, "h", function()
   hs.window.focusedWindow():moveOneScreenWest()
