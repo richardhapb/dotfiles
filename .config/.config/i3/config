@@ -10,6 +10,7 @@ exec --no-startup-id /usr/libexec/gsd-xsettings
 exec --no-startup-id ~/.screenlayout/work.sh
 exec --no-startup-id wezterm
 exec --no-startup-id brave
+exec --no-startup-id firefox
 exec --no-startup-id xcompmgr -n
 exec --no-startup-id p3x-onenote
 # Drawings
@@ -98,10 +99,13 @@ bindsym $mod+Shift+n exec --no-startup-id ~/.screenlayout/laptop.sh
 bindsym $mod+Shift+m exec --no-startup-id ~/.screenlayout/work.sh
 
 # Home screen
-bindsym $mod+Shift+b exec --no-startup-id ~/.screenlayout/home.sh
+bindsym $mod+Shift+comma exec --no-startup-id ~/.screenlayout/home.sh
 
-# Both screens
-bindsym $mod+Shift+comma exec --no-startup-id ~/.screenlayout/both.sh
+# Extended screens
+bindsym $mod+Shift+b exec --no-startup-id ~/.screenlayout/both.sh
+
+# Extended screens (meeting room)
+bindsym $mod+Shift+r exec --no-startup-id ~/.screenlayout/meeting_room.sh
 
 # Mirror screens
 bindsym $mod+Shift+period exec --no-startup-id ~/.screenlayout/clone.sh
@@ -147,11 +151,9 @@ bindsym $mod+Shift+k move down
 bindsym $mod+Shift+l move up
 bindsym $mod+Shift+semicolon move right
 
-# alternatively, you can use the cursor keys:
-bindsym $mod+Shift+Left move left
-bindsym $mod+Shift+Down move down
-bindsym $mod+Shift+Up move up
-bindsym $mod+Shift+Right move right
+# move to other screen
+bindsym $mod+Shift+Left move workspace to output left
+bindsym $mod+Shift+Right move workspace to output right
 
 # split in horizontal orientation
 bindsym $mod+x split h
@@ -205,6 +207,14 @@ bindsym $mod+9 workspace number $ws9
 bindsym $mod+0 workspace number $ws10
 
 
+workspace $ws1 output HDMI-1
+workspace $ws2 output HDMI-1
+workspace $ws3 output HDMI-1
+workspace $ws4 output HDMI-1
+workspace $ws10 output HDMI-1
+workspace $ws5 output eDP-1
+
+
 # Move focused container to workspace
 
 # I need to differentiate when i want to insert `¡` character or move the workspace
@@ -223,9 +233,9 @@ bindsym $mod+Shift+0 move container to workspace number $ws10
 
 # reload the configuration file
 bindsym $mod+Shift+c reload
-# restart i3 inplace (preserves your layout/session, can be used to upgrade i3)
+# restart i3 inplace
 bindsym $mod+Shift+r restart
-# exit i3 (logs you out of your X session)
+# exit i3
 bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'You pressed the exit shortcut. Do you really want to exit i3? This will end your X session.' -B 'Yes, exit i3' 'i3-msg exit'"
 
 # resize window (you can also use the mouse for that)
@@ -286,6 +296,7 @@ assign [class="^Brave-browser$"] $ws2
 assign [class="^p3x-onenote$"] $ws4
 assign [class="Zathura"] $ws5
 assign [class="^drawonscreen_rust$"] $ws10
+assign [class="firefox"] $ws3
 for_window [class="^Matplotlib$"] floating enable 
 for_window [class="^Matplotlib$"] resize set 540 380 
 
