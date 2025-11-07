@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -euo pipefail
-
 if [ -z "${DEV-}" ]; then
     echo "Error: DEV environment variable is not set"
     exit 1

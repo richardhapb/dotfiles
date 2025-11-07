@@ -79,9 +79,9 @@ if [[ "$NEEDS_REGEN" == true ]]; then  # Cache Homebrew prefixes to avoid slow `
 
         # Compilation paths
         echo "export SDKROOT=\"$(xcrun --show-sdk-path)\"" >> "$CACHE_FILE"
-        echo "export PKG_CONFIG_PATH=\"/opt/homebrew/lib/pkgconfig:/opt/homebrew/share/pkgconfig:${PKG_CONFIG_PATH}\"" >> "$CACHE_FILE"
+        echo "export PKG_CONFIG_PATH=\"/opt/homebrew/lib/pkgconfig:${PKG_CONFIG_PATH}\"" >> "$CACHE_FILE"
         echo "export LIBRARY_PATH=\"/opt/homebrew/lib:${LIBRARY_PATH}\"" >> "$CACHE_FILE"
-        echo "export CPATH=\"$SDKROOT/usr/include:${CPATH}\"" >> "$CACHE_FILE"
+        echo "export CPATH=\"$(xcrun --show-sdk-path)/usr/include:${CPATH}\"" >> "$CACHE_FILE"
     fi
 fi
 
@@ -131,6 +131,10 @@ alias grf='git reflog'
 alias gcl='git clone'
 alias gf='git fetch'
 alias gm='git merge'
+
+
+alias lr='ln -sf $(pwd)/target/release/$(dirname $(pwd)) ~/.local/bin'
+alias ld='ln -sf $(pwd)/target/debug/$(dirname $(pwd)) ~/.local/bin'
 
 alias h='eval $(history 0 | sort -r | sed -E "s/\s*[0-9]+\s+//" | uniq | fzf)'
 alias v="nvim"
@@ -213,6 +217,7 @@ docker_norestart() {
         docker update --restart no "$container"
     done
 }
+
 
 bindkey -s ^f "tmux-sessionizer\n"
 

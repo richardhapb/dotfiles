@@ -6,16 +6,12 @@ local config = wezterm.config_builder()
 config.keys = {}
 
 local opacity = 0.8
+local bg = "#111111"
 
-local windows = wezterm.target_triple:match("windows")
 local macos = wezterm.target_triple:match("apple")
 local linux = wezterm.target_triple:match("linux")
 
 if linux then
-  opacity = 0.9
-end
-
-if windows then
   opacity = 0.9
 end
 
@@ -74,11 +70,11 @@ config.font = wezterm.font_with_fallback {
   {
     family = 'Monaspace Neon', weight = "Medium",
     harfbuzz_features = {
-      "calt",     -- Contextual Alternates (for ligatures like ->, =>, etc.)
-      "ss01",     -- Stylistic Set 1
-      "ss02",     -- Stylistic Set 2
-      "ss03",     -- Stylistic Set 3
-      "ss04",     -- Stylistic Set 4
+      "calt", -- Contextual Alternates (for ligatures like ->, =>, etc.)
+      "ss01", -- Stylistic Set 1
+      "ss02", -- Stylistic Set 2
+      "ss03", -- Stylistic Set 3
+      "ss04", -- Stylistic Set 4
     }
   },
   { family = 'JetBrains Mono', weight = "DemiBold" },
@@ -91,7 +87,7 @@ config.use_ime = true
 config.enable_kitty_graphics = true
 
 config.colors = {
-  background = "#0b0e14",
+  background = bg,
   -- Bash color scheme syntax
   ansi = { "#000000", "#ff5555", "#50fa7b", "#f1fa8c", "#bd93f9", "#ff79c6", "#8be9fd", "#bfbfbf" },
   brights = { "#4d4d4d", "#ff6e67", "#5af78e", "#f4f99d", "#caa9fa", "#ff92d0", "#9aedfe", "#e6e6e6" },
@@ -144,12 +140,14 @@ local keys = {
     mods = "ALT",
     action = wezterm.action_callback(function(window)
       if current_opacity ~= 1 then
+        bg = "#222222"
         current_opacity = 1
       else
+        bg = "#111111"
         current_opacity = opacity
       end
 
-      window:set_config_overrides({ window_background_opacity = current_opacity })
+      window:set_config_overrides({ window_background_opacity = current_opacity, colors = { background = bg } })
     end)
   }
 }

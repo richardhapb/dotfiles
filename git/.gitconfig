@@ -7,6 +7,10 @@
     excludesfile = ~/.gitignore_global
 [diff]
     tool = nvimdiff
+[difftool]
+    prompt = false
+[difftool "nvimdiff"]
+    cmd = "nvim -d -u ~/dotfiles/min-vim/.vimrc \"$LOCAL\" \"$REMOTE\""
 [push]
     default = current
 [submodule]
