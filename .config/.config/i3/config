@@ -10,9 +10,9 @@ exec --no-startup-id /usr/libexec/gsd-xsettings
 exec --no-startup-id ~/.screenlayout/work.sh
 exec --no-startup-id wezterm
 exec --no-startup-id brave
-exec --no-startup-id firefox
+# exec --no-startup-id firefox
 exec --no-startup-id xcompmgr -n
-exec --no-startup-id p3x-onenote
+# exec --no-startup-id p3x-onenote
 # Drawings
 exec_always --no-startup-id gromit-mpx
 
@@ -205,6 +205,7 @@ bindsym $mod+7 workspace number $ws7
 bindsym $mod+8 workspace number $ws8
 bindsym $mod+9 workspace number $ws9
 bindsym $mod+0 workspace number $ws10
+bindsym $mod+grave workspace number $ws10
 
 
 workspace $ws1 output HDMI-1

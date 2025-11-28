@@ -1,5 +1,7 @@
 autoload -Uz vcs_info
 precmd() { vcs_info }
+source /usr/share/fzf/key-bindings.zsh
+source /usr/share/fzf/completion.zsh
 
 # Git branch info
 zstyle ':vcs_info:git:*' formats ' (%b)'
@@ -17,17 +19,20 @@ export KEYTIMEOUT=1  # Reduce ESC delay from 400ms to 10ms
 # bash/emacs shortcuts in insert mode
 bindkey -M viins '^A' beginning-of-line
 bindkey -M viins '^E' end-of-line
-bindkey -M viins '^R' history-incremental-search-backward
 bindkey -M viins '^F' tmux-sessionizer
 bindkey -M viins '^K' kill-line
 bindkey -M viins '^U' backward-kill-line
 bindkey -M viins '^W' backward-kill-word
 bindkey -M viins '^Y' yank
 
+eval "$(zoxide init zsh)"
+
 # Make backspace and delete work properly
 bindkey -M viins '^?' backward-delete-char
 bindkey -M viins '^H' backward-delete-char
 
+# Look for history!!
+bindkey '^R' fzf-history-widget
 
 # Locals
 export LANG="en_US.UTF-8"
