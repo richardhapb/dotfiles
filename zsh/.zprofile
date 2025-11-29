@@ -1,7 +1,5 @@
 autoload -Uz vcs_info
 precmd() { vcs_info }
-source /usr/share/fzf/key-bindings.zsh
-source /usr/share/fzf/completion.zsh
 
 # Git branch info
 zstyle ':vcs_info:git:*' formats ' (%b)'
@@ -24,8 +22,6 @@ bindkey -M viins '^K' kill-line
 bindkey -M viins '^U' backward-kill-line
 bindkey -M viins '^W' backward-kill-word
 bindkey -M viins '^Y' yank
-
-eval "$(zoxide init zsh)"
 
 # Make backspace and delete work properly
 bindkey -M viins '^?' backward-delete-char
@@ -93,10 +89,7 @@ fi
 source "$CACHE_FILE"
 
 export PYENV_ROOT="$HOME/.pyenv"
-export PATH="$PYENV_ROOT/bin:$PATH"
-if command -v pyenv >/dev/null; then
-    eval "$(pyenv init --path)"
-fi
+[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 
 alias dd="cd $DEV"
 alias cdd='cd ~/dev'
@@ -237,7 +230,9 @@ export NVIM_LOG_FILE=/tmp/nvim.log
 
 . "$HOME/.cargo/env"
 
-eval "$(fnm env --use-on-cd --shell zsh)"
+[[ $(command -v fnm 2>&1 /dev/null) ]] && eval "$(fnm env --use-on-cd --shell zsh)"
+[[ $(command -v zoxide 2>&1 /dev/null) ]] && eval "$(zoxide init zsh)"
+[[ $(command -v pyenv 2>&1 /dev/null) ]] && eval "$(pyenv init - zsh)"
 
 export LUA_PATH="./?.lua;/usr/local/share/lua/5.4/?.lua;$HOME/.luarocks/share/lua/5.4/?.lua;;"
 export LUA_CPATH="./?.so;/usr/local/lib/lua/5.4/?.so;$HOME/.luarocks/lib/lua/5.4/?.so;;"
@@ -251,6 +246,9 @@ export HISTCONTROL=ignoredups:ignorespace
 
 setopt INTERACTIVE_COMMENTS  # Allow comments in shell
 
-eval "$(zoxide init zsh)"
 
+# Set up fzf key bindings and fuzzy completion
+source <(fzf --zsh)
+# Open in tmux popup if on tmux, otherwise use --height mode
+export FZF_DEFAULT_OPTS='--height 40% --tmux bottom,40% --layout reverse --border top'
 
