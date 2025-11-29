@@ -251,5 +251,6 @@ export HISTCONTROL=ignoredups:ignorespace
 
 setopt INTERACTIVE_COMMENTS  # Allow comments in shell
 
+eval "$(zoxide init zsh)"
 
 

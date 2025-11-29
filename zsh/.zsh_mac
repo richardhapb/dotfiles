@@ -36,6 +36,7 @@ alias sed='gsed'
 alias find='gfind'
 alias perf='gperf'
 alias awk='gawk'
+alias gcc='gcc-15'
 help() { 
     args="$@"
     bash -c "help $args" 2> /dev/null

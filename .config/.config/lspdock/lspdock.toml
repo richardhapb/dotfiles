@@ -4,5 +4,5 @@ local_path = "$CWD/app"
 docker_internal_path = "/usr/src/app"
 executable = "pyright-langserver"
 pattern = "$HOME/dev/"
-log_level = "trace"
+log_level = "debug"
 patch_pid = ["pyright-langserver"]

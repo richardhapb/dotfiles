@@ -3,6 +3,7 @@ local wezterm = require 'wezterm'
 
 -- This will hold the configuration.
 local config = wezterm.config_builder()
+config.term = "xterm-256color"
 config.keys = {}
 
 local opacity = 0.8
