@@ -16,14 +16,11 @@ source $(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zs
 source $(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
 eval "$(fnm env --use-on-cd)"
 
-# SPARK
 export JAVA_HOME=$(brew --prefix java)@24 
 export PATH=$JAVA_HOME/bin:$PATH
 export SPARK_HOME=$(brew --prefix apache-spark)/libexec
 export PATH=$SPARK_HOME/bin:$PATH
 export PATH=$HOME/.cargo/env:$PATH
-export CC=$(brew --prefix llvm)/bin/clang
-export CXX=$(brew --prefix llvm)/bin/clang++
 export PATH=$PATH:"/Users/richard/texpresso/build"
 export PATH=$PATH:"/Users/richard/kanata"
 export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH:/Users/richard/mongodb/bin"
@@ -36,7 +33,6 @@ alias sed='gsed'
 alias find='gfind'
 alias perf='gperf'
 alias awk='gawk'
-alias gcc='gcc-15'
 help() { 
     args="$@"
     bash -c "help $args" 2> /dev/null

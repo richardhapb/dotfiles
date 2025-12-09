@@ -135,7 +135,8 @@ alias lr='ln -sf $(pwd)/target/release/$(dirname $(pwd)) ~/.local/bin'
 alias ld='ln -sf $(pwd)/target/debug/$(dirname $(pwd)) ~/.local/bin'
 
 alias h='eval $(history 0 | sort -r | sed -E "s/\s*[0-9]+\s+//" | uniq | fzf)'
-alias v="nvim"
+alias v="NVIM_LSP_ENABLED=1 nvim"
+alias vw="NVIM_LSP_ENABLED=0 nvim"
 alias f='fd --type f --strip-cwd-prefix --hidden --follow --exclude .git | fzf --preview "bat --style=numbers --color=always --line-range :500 {}" | xargs -r nvim'
 d() { local dir=$(fd --type d --strip-cwd-prefix --hidden --follow --exclude .git | fzf --preview "ls -lhAG {}"); [ -n "$dir" ] && cd "$dir" }
 alias dl='docker ps -a --format "{{.State}} | {{.Names}}" | fzf --preview "docker logs -n 1000 {+2}" | awk -F"|" "{print \$2}" | xargs -r docker logs -n 1000 -f'
@@ -214,6 +215,44 @@ docker_norestart() {
     for container in $(docker ps -a --format '{{.Names}}'); do
         docker update --restart no "$container"
     done
+}
+
+# For loading .env
+load() {
+    file=$1
+    if [[ -z "$file" ]]; then
+        echo "File argument  (\$1) is required"
+        exit 1
+    fi
+    if [[ ! -f "$file" ]]; then
+        echo "File $file not found"
+        exit 1
+    fi
+
+    while IFS= read -r line || [ -n "$line" ]; do
+        [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+        export "$line"
+    done < "$file"
+}
+
+# Rust symlinks
+sym() {
+    arg=$1
+    if [[ -z "$arg" ]]; then
+        echo "File argument  (\$1) is required"
+        exit 1
+    fi
+    file="$(pwd)/target/release/$arg"
+
+    if [[ ! -f "$file" ]]; then
+        echo "File $file not found"
+        exit 1
+    fi
+
+    ln -sf "$file" "$HOME/.local/bin"
+    if [ $? -eq 0 ]; then
+        echo "Symlink created in ~/.local/bin"
+    fi
 }
 
 

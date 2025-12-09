@@ -9,4 +9,5 @@ macos-non-native-fullscreen=true
 keybind="alt+v=toggle_visibility"
 keybind="alt+f=toggle_fullscreen"
 keybind="alt+t=toggle_quick_terminal"
-theme = tokyonight-storm
+font-family = Monaspace Neon
+font-variation = wght=500

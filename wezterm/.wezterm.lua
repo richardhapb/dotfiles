@@ -6,6 +6,10 @@ local config = wezterm.config_builder()
 config.term = "xterm-256color"
 config.keys = {}
 
+config.animation_fps = 120
+config.max_fps = 120
+config.front_end = "OpenGL"
+
 local opacity = 0.8
 local bg = "#111111"
 
