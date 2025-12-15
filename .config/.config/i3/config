@@ -8,7 +8,7 @@
 exec --no-startup-id xrdb -merge ~/.Xresources
 exec --no-startup-id /usr/libexec/gsd-xsettings
 exec --no-startup-id ~/.screenlayout/work.sh
-exec --no-startup-id wezterm
+exec --no-startup-id ghostty
 exec --no-startup-id brave
 # exec --no-startup-id firefox
 exec --no-startup-id xcompmgr -n
@@ -291,7 +291,7 @@ workspace $ws1 gaps outer 0px
 
 # Layout
 
-# assign [class="^com.mitchellh.ghostty$"] $ws1
+assign [class="^com.mitchellh.ghostty$"] $ws1
 assign [class="^org.wezfurlong.wezterm$"] $ws1
 assign [class="^Brave-browser$"] $ws2
 assign [class="^p3x-onenote$"] $ws4
