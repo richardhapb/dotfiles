@@ -5,5 +5,7 @@ warlog.md
 ty.toml
 docker-compose.override.yml
 tags
+notes.txt
+.nvim
 
 

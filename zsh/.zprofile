@@ -77,12 +77,6 @@ if [[ "$NEEDS_REGEN" == true ]]; then  # Cache Homebrew prefixes to avoid slow `
         echo "export LLVM_PATH=\"$(brew --prefix llvm)/bin\"" >> "$CACHE_FILE"
         echo "export ZSH_HIGHLIGHT_PATH=\"$HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh\"" >> "$CACHE_FILE"
         echo "export ZSH_SUGGESTIONS_PATH=\"$HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh\"" >> "$CACHE_FILE"
-
-        # Compilation paths
-        echo "export SDKROOT=\"$(xcrun --show-sdk-path)\"" >> "$CACHE_FILE"
-        echo "export PKG_CONFIG_PATH=\"/opt/homebrew/lib/pkgconfig:${PKG_CONFIG_PATH}\"" >> "$CACHE_FILE"
-        echo "export LIBRARY_PATH=\"/opt/homebrew/lib:${LIBRARY_PATH}\"" >> "$CACHE_FILE"
-        echo "export CPATH=\"$(xcrun --show-sdk-path)/usr/include:${CPATH}\"" >> "$CACHE_FILE"
     fi
 fi
 

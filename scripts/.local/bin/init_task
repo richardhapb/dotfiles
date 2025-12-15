@@ -1,32 +1,81 @@
 #!/usr/bin/env bash
 
 category=$1
+[[ "$category" == "" ]] && category="work"
 
-if [[ "$category" == "" ]]; then
-    category="work"
-fi
+# Detect OS
+OS="$(uname -s)"
 
-# Get task name using either rofi or zenity
-if command -v zenity >/dev/null 2>&1; then
-    description=$(zenity --entry --title="[$category] Insert the description" --text="Task to do it" --entry-text="")
-elif command -v rofi >/dev/null 2>&1; then
-    description=$(rofi -dmenu -p "Enter task name" -lines 0)
-else
-    exit 1
-fi
+# Get task description based on platform
+case "$OS" in
+    Darwin)
+        # macOS - use osascript
+        description=$(osascript -e 'Tell application "System Events" to display dialog "Task to do:" default answer "" with title "['$category'] Insert description"' -e 'text returned of result' 2>/dev/null)
+        # Recover the focus to the latest focused window
+        osascript -e 'tell application "System Events" to keystroke tab using {command down}'
+        ;;
+    Linux)
+        # Linux - prefer zenity over rofi
+        if command -v zenity >/dev/null 2>&1; then
+            description=$(zenity --entry --title="[$category] Insert the description" --text="Task to do it" --entry-text="")
+        elif command -v rofi >/dev/null 2>&1; then
+            description=$(rofi -dmenu -p "Enter task name" -lines 0)
+        else
+            echo "Error: Neither zenity nor rofi found. Install one of them."
+            exit 1
+        fi
+        ;;
+    *)
+        echo "Unsupported OS: $OS"
+        exit 1
+        ;;
+esac
 
-# Exit if there is no description
+# Exit if cancelled or empty
 [ -z "$description" ] && exit 1
 
-# Show notification
-notify-send "Starting timer for: $description"
+# Send start notification
+case "$OS" in
+    Darwin)
+        if command -v terminal-notifier >/dev/null 2>&1; then
+            terminal-notifier -title "Task Timer" -message "Starting: $description" -sound default
+        else
+            osascript -e 'display notification "Starting timer for: '"$description"'" with title "Task Timer"'
+        fi
+        ;;
+    Linux)
+        notify-send "Starting timer for: $description"
+        ;;
+esac
 
 # Run jn command
-~/.local/bin/jn -t 1h -c "$category" -n break -l "$description" -d
+~/.local/bin/jn -t 1h -c "$category" -n break -l "$description" -d -H
 
-# Check exit status
+# Send completion notification based on exit status
 if [ $? -eq 0 ]; then
-    notify-send "Time has been finalized" "$description" "Task completed"
+    case "$OS" in
+        Darwin)
+            if command -v terminal-notifier >/dev/null 2>&1; then
+                terminal-notifier -title "Task completed" -message "$description" -sound Glass
+            else
+                osascript -e 'display notification "'"$description"'" with title "Task completed" sound name "Glass"'
+            fi
+            ;;
+        Linux)
+            notify-send "Time has been finalized" "$description"
+            ;;
+    esac
 else
-    notify-send "Task failed" "Error running timer"
+    case "$OS" in
+        Darwin)
+            if command -v terminal-notifier >/dev/null 2>&1; then
+                terminal-notifier -title "Task failed" -message "Error running timer" -sound Basso
+            else
+                osascript -e 'display notification "Error running timer" with title "Task failed" sound name "Basso"'
+            fi
+            ;;
+        Linux)
+            notify-send "Task failed" "Error running timer"
+            ;;
+    esac
 fi

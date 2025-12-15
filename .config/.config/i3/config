@@ -82,8 +82,8 @@ bindsym $mod+period exec --no-startup-id ~/.local/bin/init_task work
 bindsym $mod+space exec --no-startup-id ~/.local/bin/spotify_player playback play-pause
 bindsym $mod+bracketleft exec --no-startup-id ~/.local/bin/spotify_player playback previous
 bindsym $mod+bracketright exec --no-startup-id ~/.local/bin/spotify_player playback next
-bindsym $mod+Up exec --no-startup-id ~/.local/bin/spotify_player playback volume --offset 5
-bindsym $mod+Down exec --no-startup-id ~/.local/bin/spotify_player playback volume --offset -- -5 
+bindsym $mod+plus exec --no-startup-id ~/.local/bin/spotify_player playback volume --offset 5
+bindsym $mod+minus exec --no-startup-id ~/.local/bin/spotify_player playback volume --offset -- -5 
 
 # Filesystem
 bindsym $mod+e exec --no-startup-id thunar
@@ -167,7 +167,7 @@ bindsym $mod+f fullscreen toggle
 # change container layout (stacked, tabbed, toggle split)
 bindsym $mod+s layout stacking
 bindsym $mod+w layout tabbed
-bindsym $mod+minus layout toggle split
+bindsym $mod+Shift+s layout toggle split
 
 # toggle tiling / floating
 bindsym $mod+Shift+space floating toggle

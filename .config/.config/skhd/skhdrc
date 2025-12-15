@@ -50,3 +50,13 @@ alt - 6 : yabai -m space --focus 6
 alt - 7 : yabai -m space --focus 7
 alt - 8 : yabai -m space --focus 8
 alt - 9 : yabai -m space --focus 9
+
+
+alt - 0x2C : /bin/bash -c "~/.local/bin/init_task programming"
+alt - 0x2F : /bin/bash -c "~/.local/bin/init_task work"
+alt - 0x18 : spotify_player playback volume --offset 5
+alt - 0x1B : spotify_player playback volume --offset -- -5
+alt - 0x21 : spotify_player playback previous
+alt - 0x1E : spotify_player playback next
+alt - 0x31 : spotify_player playback play-pause
+
