@@ -60,3 +60,4 @@ alt - 0x21 : spotify_player playback previous
 alt - 0x1E : spotify_player playback next
 alt - 0x31 : spotify_player playback play-pause
 
+
