@@ -9,10 +9,12 @@ OS="$(uname -s)"
 # Get task description based on platform
 case "$OS" in
     Darwin)
+        pid=$(winh --get-pid)
+
         # macOS - use osascript
         description=$(osascript -e 'Tell application "System Events" to display dialog "Task to do:" default answer "" with title "['$category'] Insert description"' -e 'text returned of result' 2>/dev/null)
-        # Recover the focus to the latest focused window
-        osascript -e 'tell application "System Events" to keystroke tab using {command down}'
+
+        winh --focus-pid $pid
         ;;
     Linux)
         # Linux - prefer zenity over rofi
@@ -37,11 +39,13 @@ esac
 # Send start notification
 case "$OS" in
     Darwin)
+
         if command -v terminal-notifier >/dev/null 2>&1; then
             terminal-notifier -title "Task Timer" -message "Starting: $description" -sound default
         else
             osascript -e 'display notification "Starting timer for: '"$description"'" with title "Task Timer"'
         fi
+
         ;;
     Linux)
         notify-send "Starting timer for: $description"

@@ -10,7 +10,7 @@ set softtabstop=4
 set shiftwidth=4
 set splitright
 
-set cindent
+set nocindent
 set cinkeys-=0#
 set autoindent
 
@@ -28,14 +28,17 @@ set encoding=utf-8
 set foldmethod=indent
 set foldlevel=99
 
+" Man files
+runtime! ftplugin/man.vim
+
+syntax on
+
+
+" smart file search
+set path+=**
 set wildmenu
 set wildoptions=pum
 
-" Man files
-runtime! ftplugin/man.vim
-   
-
-syntax on
 
 " DIFF colors
 hi DiffAdd      ctermfg=NONE          ctermbg=DarkBlue
