@@ -40,6 +40,7 @@ shift + alt - 6 : yabai -m window --space 6; yabai -m space --focus 6;
 shift + alt - 7 : yabai -m window --space 7; yabai -m space --focus 7;
 shift + alt - 8 : yabai -m window --space 8; yabai -m space --focus 8;
 shift + alt - 9 : yabai -m window --space 9; yabai -m space --focus 9;
+shift + alt - 0 : yabai -m window --space 10; yabai -m space --focus 10;
 
 alt - 1 : yabai -m space --focus 1
 alt - 2 : yabai -m space --focus 2
@@ -50,6 +51,7 @@ alt - 6 : yabai -m space --focus 6
 alt - 7 : yabai -m space --focus 7
 alt - 8 : yabai -m space --focus 8
 alt - 9 : yabai -m space --focus 9
+alt - 0x32 : yabai -m space --focus 10
 
 
 alt - 0x2C : /bin/bash -c "~/.local/bin/init_task programming"
