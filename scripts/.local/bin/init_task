@@ -53,7 +53,7 @@ case "$OS" in
 esac
 
 # Run jn command
-~/.local/bin/jn -t 1h -c "$category" -n break -l "$description" -d -H
+~/.local/bin/jn -t 1h -b 10 -c "$category" -n break -l "$description" -d -H
 
 # Send completion notification based on exit status
 if [ $? -eq 0 ]; then
