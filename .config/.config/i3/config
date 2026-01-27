@@ -3,7 +3,9 @@
 #
 # Should you change your keyboard layout some time, delete
 # this file and re-run i3-config-wizard(1).
-#
+
+# Notifications daemon
+exec --no-startup-id dunst
 
 exec --no-startup-id xrdb -merge ~/.Xresources
 exec --no-startup-id /usr/libexec/gsd-xsettings
@@ -15,6 +17,7 @@ exec --no-startup-id xcompmgr -n
 # exec --no-startup-id p3x-onenote
 # Drawings
 exec_always --no-startup-id gromit-mpx
+
 
 exec_always --no-startup-id setxkbmap -option compose:ralt
 exec_always --no-startup-id ~/.screenlayout/wallpaper.sh
@@ -296,7 +299,7 @@ assign [class="^org.wezfurlong.wezterm$"] $ws1
 assign [class="^Brave-browser$"] $ws2
 assign [class="^p3x-onenote$"] $ws4
 assign [class="Zathura"] $ws5
-assign [class="^drawonscreen_rust$"] $ws10
+assign [class="^drawonscreen_rust$"] $ws9
 assign [class="firefox"] $ws3
 for_window [class="^Matplotlib$"] floating enable 
 for_window [class="^Matplotlib$"] resize set 540 380 

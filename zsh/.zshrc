@@ -8,3 +8,6 @@ fi
 
 export PATH=$HOME/.local/bin:$PATH  # I need this as maximum priority
 
+
+# opencode
+export PATH=/home/richard/.opencode/bin:$PATH

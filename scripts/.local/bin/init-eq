@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+set -e
+
+# Start liveq in detached tmux session
+tmux new-session -d -s eq "$DEV/liveq/target/release/liveq" || true
+
+# Wait for liveq ports to appear
+timeout=10
+while [ $timeout -gt 0 ]; do
+    if pw-cli info alsa_capture.liveq &>/dev/null; then
+        break
+    fi
+    sleep 0.5
+    ((timeout--))
+done
+
+# Disconnect existing Brave links
+pw-link -d Brave:output_FL alsa_output.pci-0000_03_00.6.analog-stereo:playback_FL 2>/dev/null || true
+pw-link -d Brave:output_FR alsa_output.pci-0000_03_00.6.analog-stereo:playback_FR 2>/dev/null || true
+
+# Route: Brave -> liveq -> speakers
+pw-link Brave:output_FL alsa_capture.liveq:input_FL
+pw-link Brave:output_FR alsa_capture.liveq:input_FR
+
+pw-link -d alsa_playback.liveq:output_FL alsa_output.pci-0000_03_00.6.analog-stereo:playback_FL 2>/dev/null || true
+pw-link -d alsa_playback.liveq:output_FR alsa_output.pci-0000_03_00.6.analog-stereo:playback_FR 2>/dev/null || true
+
+pw-link alsa_playback.liveq:output_FL alsa_output.pci-0000_03_00.6.analog-stereo:playback_FL
+pw-link alsa_playback.liveq:output_FR alsa_output.pci-0000_03_00.6.analog-stereo:playback_FR
+
+# Route: microphone -> liveq
+pw-link -d alsa_input.pci-0000_03_00.6.analog-stereo:capture_FL alsa_capture.liveq:input_FL 2>/dev/null || true
+pw-link -d alsa_input.pci-0000_03_00.6.analog-stereo:capture_FR alsa_capture.liveq:input_FR 2>/dev/null || true
+
