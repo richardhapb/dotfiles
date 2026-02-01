@@ -109,14 +109,6 @@ fi
 
 export NOTES="$HOME/notes"
 
-# pnpm
-export PNPM_HOME="/home/richard/.local/share/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME:$PATH" ;;
-esac
-# pnpm end
-
 export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
 
 # The next line updates PATH for the Google Cloud SDK.

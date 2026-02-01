@@ -14,7 +14,6 @@ export DEV="$HOME/proj"
 export NOTES="$HOME/notes"
 source $(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source $(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-eval "$(fnm env --use-on-cd)"
 
 export JAVA_HOME=$(brew --prefix java)@24 
 export PATH=$JAVA_HOME/bin:$PATH
@@ -50,11 +49,11 @@ export BOOKS="$HOME/Documents/Books"
 export PATH="/opt/homebrew/bin:$PATH"
 
 
-# pnpm
-export PNPM_HOME="/Users/richard/Library/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME:$PATH" ;;
-esac
-# pnpm end
+# bun completions
+[ -s "/Users/richard/.bun/_bun" ] && source "/Users/richard/.bun/_bun"
 
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+
+alias get_idf='. $DEV/esp/export.sh'

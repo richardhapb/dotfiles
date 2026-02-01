@@ -263,7 +263,6 @@ export NVIM_LOG_FILE=/tmp/nvim.log
 
 . "$HOME/.cargo/env"
 
-[[ $(command -v fnm 2>&1 /dev/null) ]] && eval "$(fnm env --use-on-cd --shell zsh)"
 [[ $(command -v zoxide 2>&1 /dev/null) ]] && eval "$(zoxide init zsh)"
 [[ $(command -v pyenv 2>&1 /dev/null) ]] && eval "$(pyenv init - zsh)"
 
@@ -284,4 +283,7 @@ setopt INTERACTIVE_COMMENTS  # Allow comments in shell
 source <(fzf --zsh)
 # Open in tmux popup if on tmux, otherwise use --height mode
 export FZF_DEFAULT_OPTS='--height 40% --tmux bottom,40% --layout reverse --border top'
+
+# opencode
+export PATH="$HOME/.opencode/bin:$PATH"
 

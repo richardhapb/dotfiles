@@ -53,33 +53,4 @@ case "$OS" in
 esac
 
 # Run jn command
-~/.local/bin/jn -t 1h -b 10 -c "$category" -n break -l "$description" -d -H
-
-# Send completion notification based on exit status
-if [ $? -eq 0 ]; then
-    case "$OS" in
-        Darwin)
-            if command -v terminal-notifier >/dev/null 2>&1; then
-                terminal-notifier -title "Task completed" -message "$description" -sound Glass
-            else
-                osascript -e 'display notification "'"$description"'" with title "Task completed" sound name "Glass"'
-            fi
-            ;;
-        Linux)
-            notify-send "Time has been finalized" "$description"
-            ;;
-    esac
-else
-    case "$OS" in
-        Darwin)
-            if command -v terminal-notifier >/dev/null 2>&1; then
-                terminal-notifier -title "Task failed" -message "Error running timer" -sound Basso
-            else
-                osascript -e 'display notification "Error running timer" with title "Task failed" sound name "Basso"'
-            fi
-            ;;
-        Linux)
-            notify-send "Task failed" "Error running timer"
-            ;;
-    esac
-fi
+~/.local/bin/jn -t 1h -b 10 -c "$category" -n break -l "$description" -d
