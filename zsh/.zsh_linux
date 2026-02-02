@@ -8,8 +8,12 @@ case $- in
       *) return;;
 esac
 
-source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
-source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+if [ -d /usr/share/zsh/plugins/zsh-autosuggestions ]; then
+    source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+fi
+if [ -d /usr/share/zsh/plugins/zsh-syntax-highlighting ]; then
+    source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+fi
 
 # don't put duplicate lines or lines starting with space in the history.
 # See bash(1) for more options

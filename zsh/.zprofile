@@ -284,6 +284,14 @@ source <(fzf --zsh)
 # Open in tmux popup if on tmux, otherwise use --height mode
 export FZF_DEFAULT_OPTS='--height 40% --tmux bottom,40% --layout reverse --border top'
 
+# bun completions
+[ -s "/Users/richard/.bun/_bun" ] && source "/Users/richard/.bun/_bun"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+
+
 # opencode
 export PATH="$HOME/.opencode/bin:$PATH"
 
