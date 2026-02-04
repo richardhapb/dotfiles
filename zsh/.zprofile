@@ -7,9 +7,28 @@ zstyle ':vcs_info:*' enable git
 
 setopt PROMPT_SUBST
 
+is_rpi() {
+    if cat /etc/apt/sources.list.d/raspi.list &>2 /dev/null; then
+        return 0
+    fi
+
+    return 1
+}
+
+symbol="green"
+if (is_rpi); then
+    color="red"
+elif [ $(uname) = "Linux" ]; then
+    color="green"
+    symbol="red"
+else
+    # Mac
+    color="blue"
+fi
+
 # Two-line prompt: path on first line, symbol on second
-PROMPT='%F{blue}%~%f%F{yellow}${vcs_info_msg_0_}%f
-%F{green}❯%f '
+PROMPT='%F{'"$color"'}%~%f%F{yellow}${vcs_info_msg_0_}%f
+%F{'"$symbol"'}❯%f '
 
 bindkey -v  # Enable vi mode
 export KEYTIMEOUT=1  # Reduce ESC delay from 400ms to 10ms
