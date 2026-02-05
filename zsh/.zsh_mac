@@ -25,6 +25,7 @@ export PATH=$PATH:"/Users/richard/kanata"
 export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH:/Users/richard/mongodb/bin"
 export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
 export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
+export PATH="/opt/homebrew/opt/ruby/bin:$PATH"
 
 # This ensures the use of gsed instead of the mac version of sed
 export PATH="/opt/homebrew/opt/gnu-sed/libexec/gnubin:$PATH"
