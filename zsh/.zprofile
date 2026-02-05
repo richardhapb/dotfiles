@@ -8,7 +8,7 @@ zstyle ':vcs_info:*' enable git
 setopt PROMPT_SUBST
 
 is_rpi() {
-    if cat /etc/apt/sources.list.d/raspi.list &>2 /dev/null; then
+    if cat /etc/apt/sources.list.d/raspi.list &> /dev/null; then
         return 0
     fi
 

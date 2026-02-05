@@ -1,7 +1,7 @@
 .DS_Store
 _install.sh
 todo.md
-warlog.md
+devlog.md
 ty.toml
 docker-compose.override.yml
 tags
