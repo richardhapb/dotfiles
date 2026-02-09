@@ -94,15 +94,13 @@ if [[ "$NEEDS_REGEN" == true ]]; then  # Cache Homebrew prefixes to avoid slow `
         echo "export JAVA_HOME=\"$(brew --prefix java)@17\"" >> "$CACHE_FILE"
         echo "export SPARK_HOME=\"$(brew --prefix apache-spark)/libexec\"" >> "$CACHE_FILE"
         echo "export LLVM_PATH=\"$(brew --prefix llvm)/bin\"" >> "$CACHE_FILE"
+        echo "PATH=\"$PATH:$(brew --prefix ruby)/bin\"" >> "$CACHE_FILE"
         echo "export ZSH_HIGHLIGHT_PATH=\"$HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh\"" >> "$CACHE_FILE"
         echo "export ZSH_SUGGESTIONS_PATH=\"$HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh\"" >> "$CACHE_FILE"
     fi
 fi
 
 source "$CACHE_FILE"
-
-export PYENV_ROOT="$HOME/.pyenv"
-[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 
 alias dd="cd $DEV"
 alias cdd='cd ~/dev'
@@ -283,7 +281,6 @@ export NVIM_LOG_FILE=/tmp/nvim.log
 . "$HOME/.cargo/env"
 
 [[ $(command -v zoxide 2>&1 /dev/null) ]] && eval "$(zoxide init zsh)"
-[[ $(command -v pyenv 2>&1 /dev/null) ]] && eval "$(pyenv init - zsh)"
 
 export LUA_PATH="./?.lua;/usr/local/share/lua/5.4/?.lua;$HOME/.luarocks/share/lua/5.4/?.lua;;"
 export LUA_CPATH="./?.so;/usr/local/lib/lua/5.4/?.so;$HOME/.luarocks/lib/lua/5.4/?.so;;"

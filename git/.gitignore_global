@@ -7,5 +7,6 @@ docker-compose.override.yml
 tags
 notes.txt
 .nvim
+.claude
 
 
