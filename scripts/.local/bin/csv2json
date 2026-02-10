@@ -1,0 +1,11 @@
+#!/usr/bin/env python3
+
+import csv
+import json
+import sys
+
+# Read from stdin, write to stdout
+reader = csv.DictReader(sys.stdin)
+rows = [dict(row) for row in reader]
+
+print(json.dumps(rows, ensure_ascii=False))
