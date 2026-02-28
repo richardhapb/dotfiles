@@ -1,0 +1,29 @@
+#!/bin/bash
+
+APP_NAME=$1
+DURATION=10
+
+if [ -z "$APP_NAME" ]; then
+  echo "Usage: bench <process_name>"
+  exit 1
+fi
+
+PID=$(pgrep -x "$APP_NAME")
+if [ -z "$PID" ]; then
+  echo "Process $APP_NAME not found"
+  exit 1
+fi
+
+echo "Sampling $APP_NAME (PID: $PID) for ${DURATION}s..."
+
+total=0
+count=0
+for i in $(seq 1 $DURATION); do
+  cpu=$(ps -p $PID -o %cpu | tail -1 | tr -d ' ')
+  total=$(echo "$total + $cpu" | bc)
+  count=$((count + 1))
+  sleep 1
+done
+
+avg=$(echo "scale=2; $total / $count" | bc)
+echo "Average CPU: ${avg}%"

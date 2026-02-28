@@ -27,5 +27,6 @@ yabai -m rule --add app="^python*$" manage=off
 yabai -m rule --add app="^Ghostty$" manage=on space=1
 yabai -m rule --add app="^Brave$" manage=on space=2
 yabai -m rule --add app="^WhatsApp$" manage=on space=8
+yabai -m rule --add app="^just_draw$" manage=on space=9
 
 yabai -m config auto_balance off

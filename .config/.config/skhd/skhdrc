@@ -55,7 +55,7 @@ alt - 0x32 : yabai -m space --focus 10
 alt - 0x0A : yabai -m space --focus 10
 
 alt - g : ns-clip
-
+alt - p : just_draw
 
 alt - 0x2C : /bin/bash -c "~/.local/bin/init_task programming"
 alt - 0x2F : /bin/bash -c "~/.local/bin/init_task work"
