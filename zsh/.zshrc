@@ -8,5 +8,3 @@ fi
 
 export PATH=$HOME/.local/bin:$PATH  # I need this as maximum priority
 
-. "$HOME/.zshenv"
-
