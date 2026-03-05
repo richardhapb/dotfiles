@@ -92,7 +92,7 @@ bindsym $mod+minus exec --no-startup-id ~/.local/bin/spotify_player playback vol
 bindsym $mod+e exec --no-startup-id thunar
 
 # Drawing
-bindsym $mod+p exec --no-startup-id drawonscreen_rust
+bindsym $mod+p exec --no-startup-id just_draw
 
 
 # Only laptop screen
@@ -300,6 +300,7 @@ assign [class="^Brave-browser$"] $ws2
 assign [class="^p3x-onenote$"] $ws4
 assign [class="Zathura"] $ws5
 assign [class="^drawonscreen_rust$"] $ws9
+assign [title="^JUST DRAW$"] $ws9
 assign [class="firefox"] $ws3
 for_window [class="^Matplotlib$"] floating enable 
 for_window [class="^Matplotlib$"] resize set 540 380 
