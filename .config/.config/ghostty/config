@@ -11,3 +11,7 @@ keybind="alt+f=toggle_fullscreen"
 keybind="alt+t=toggle_quick_terminal"
 font-family = Monaspace Neon
 font-variation = wght=500
+
+theme = dark:Rose Pine,light:Catppuccin Latte
+palette = 0=#707070
+
