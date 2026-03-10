@@ -7,6 +7,9 @@ if [ -f "$HOME/google-cloud-sdk/path.zsh.inc" ]; then . "$HOME/google-cloud-sdk/
 # The next line enables shell command completion for gcloud.
 if [ -f "$HOME/google-cloud-sdk/completion.zsh.inc" ]; then . "$HOME/google-cloud-sdk/completion.zsh.inc"; fi
 
+[ -f '/opt/homebrew/opt/chruby/share/chruby/chruby.sh' ] && source /opt/homebrew/opt/chruby/share/chruby/chruby.sh
+[ -f '/opt/homebrew/opt/chruby/share/chruby/auto.sh' ] && source /opt/homebrew/opt/chruby/share/chruby/auto.sh
+
 export ICLOUD="$HOME/Library/Mobile Documents/com~apple~CloudDocs"
 export IN="$HOME/Documents/Brain/Inbox"
 export DEV0="$HOME/Documents/Developer"
@@ -48,3 +51,9 @@ export SNVIM="$DEV/cont/neovim"
 export BOOKS="$HOME/Documents/Books"
 export PATH="/opt/homebrew/bin:$PATH"
 
+# The following lines have been added by Docker Desktop to enable Docker CLI completions.
+fpath=(/Users/richard.penabonifaz/.docker/completions $fpath)
+autoload -Uz compinit
+compinit
+# End of Docker CLI completions
+#
