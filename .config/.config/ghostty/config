@@ -14,4 +14,5 @@ font-variation = wght=500
 
 theme = dark:Rose Pine,light:Catppuccin Latte
 palette = 0=#707070
+palette = 4=#1a839e
 
