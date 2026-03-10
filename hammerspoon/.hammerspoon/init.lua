@@ -367,11 +367,11 @@ hs.hotkey.bind({ "alt" }, "]", function()
   hs.execute("spotify_player playback next", true)
 end)
 
-hs.hotkey.bind({ "alt" }, "down", function()
+hs.hotkey.bind({ "alt" }, "-", function()
   hs.execute("spotify_player playback volume --offset -- -5", true)
 end)
 
-hs.hotkey.bind({ "alt" }, "up", function()
+hs.hotkey.bind({ "alt" }, "=", function()
   hs.execute("spotify_player playback volume --offset 5", true)
 end)
 
@@ -441,3 +441,4 @@ hs.hotkey.bind({ "alt" }, ",", function()
 
   initJn(category)
 end)
+hs.loadSpoon('ControlEscape'):start() -- Load Hammerspoon bits from https://github.com/jasonrudolph/ControlEscape.spoon
