@@ -20,13 +20,13 @@ local function loadWorkspaceData()
   return json.decode(content) or {}
 end
 
-local workspaces    = loadWorkspaceData() -- windowId → workspace number
-local maxWorkspaces = 9
-local windowsPosition = {}               -- windowId → last known frame (on-screen)
-local focusedWindow = {}                 -- workspace number → last focused window
+local workspaces      = loadWorkspaceData() -- windowId -> workspace number
+local maxWorkspaces   = 9
+local windowsPosition = {}                  -- windowId -> last known frame (on-screen)
+local focusedWindow   = {}                  -- workspace number -> last focused window
 
 -- Metatables same as before
-windowsPosition = setmetatable(windowsPosition, {
+windowsPosition       = setmetatable(windowsPosition, {
   __index = function(t, k)
     local v = rawget(t, k)
     if v ~= nil then return v end
@@ -47,7 +47,7 @@ windowsPosition = setmetatable(windowsPosition, {
   end
 })
 
-focusedWindow = setmetatable(focusedWindow, {
+focusedWindow         = setmetatable(focusedWindow, {
   __index = function(t, k)
     local v = rawget(t, k)
     if v then return v end
@@ -70,9 +70,7 @@ local function saveWorkspaceData(data)
   file:close()
 end
 
--- ---------------------------------------------------------------------------
 -- Screen slot management
--- ---------------------------------------------------------------------------
 
 -- Returns screens sorted clockwise starting from primary.
 -- Clockwise angle is computed from the centroid of all screens.
@@ -98,10 +96,11 @@ local function getScreenSlots()
     local f = s:frame()
     local dx = (f.x + f.w / 2) - cx
     local dy = (f.y + f.h / 2) - cy
-    -- CW from north: atan2(dx, -dy), normalised to [0, 2π)
+    -- CW from north: atan2(dx, -dy), normalised to [0, 2\pi)
     -- math.atan(y,x) is Lua 5.3+ two-arg form; alias cast silences EmmyLua 1-arg stub
     local atan2 = math.atan --[[@as fun(y:number,x:number):number]]
     local a = atan2(dx, -dy)
+    -- transform to positive preserving the angle
     if a < 0 then a = a + 2 * math.pi end
     return a
   end
@@ -127,8 +126,8 @@ end
 
 -- slotWorkspace[i] = workspace number currently shown on slot i (1-indexed)
 -- nil means the slot is empty (no workspace assigned yet)
-local slotWorkspace = {}    -- slot index → ws number
-local workspaceSlot = {}    -- ws number  → slot index
+local slotWorkspace = {} -- slot index -> ws number
+local workspaceSlot = {} -- ws number  -> slot index
 
 -- initSlots does NOT pre-fill secondary slots.
 -- Slots are filled lazily as workspaces are shown via showWorkspace.
@@ -141,9 +140,7 @@ end
 
 initSlots()
 
--- ---------------------------------------------------------------------------
 -- Window positioning helpers
--- ---------------------------------------------------------------------------
 
 local OFFSCREEN_X = 30000
 local OFFSCREEN_Y = 30000
@@ -168,7 +165,7 @@ local function hideWorkspace(wsNum)
 end
 
 -- Place all windows of wsNum filling the given screen.
--- Does NOT save position here — windowsPosition is the canonical "last real frame"
+-- Does NOT save position here -- windowsPosition is the canonical "last real frame"
 -- and must only be written when a window is known to be on a real screen (hideWorkspace above).
 -- app:activate() is intentionally omitted; focus is managed by showWorkspace after placement.
 local function placeWorkspaceOnScreen(wsNum, screen)
@@ -186,14 +183,42 @@ local function placeWorkspaceOnScreen(wsNum, screen)
   end
 end
 
--- ---------------------------------------------------------------------------
 -- Core workspace switcher
--- ---------------------------------------------------------------------------
 
 local currentWorkspace = 1
 
+-- Ensure every screen slot has a workspace assigned, using workspaces not
+-- currently visible. Skips slot 1 (primary) — that is always managed explicitly.
+-- Also prunes stale slots if screen count shrank.
+local function ensureSlotsFilled(numSlots)
+  -- Remove slots that no longer correspond to a screen
+  for slotIdx, wsNum in pairs(slotWorkspace) do
+    if slotIdx > numSlots then
+      hideWorkspace(wsNum)
+      workspaceSlot[wsNum] = nil
+      slotWorkspace[slotIdx] = nil
+    end
+  end
+
+  -- Fill empty slots 2..numSlots
+  local nextWs = 1
+  for slotIdx = 2, numSlots do
+    if not slotWorkspace[slotIdx] then
+      -- Advance nextWs to one that is not already assigned to any slot
+      while nextWs <= maxWorkspaces and workspaceSlot[nextWs] ~= nil do
+        nextWs = nextWs + 1
+      end
+      if nextWs <= maxWorkspaces then
+        slotWorkspace[slotIdx] = nextWs
+        workspaceSlot[nextWs] = slotIdx
+        nextWs = nextWs + 1
+      end
+    end
+  end
+end
+
 local function showWorkspace(n)
-  if n == 0 then return end  -- 0 is frozen/pinned
+  if n == 0 then return end -- 0 is frozen/pinned
   if n == currentWorkspace then return end
 
   local slots = getScreenSlots()
@@ -202,21 +227,21 @@ local function showWorkspace(n)
   -- Save focused window of current workspace before switching
   focusedWindow[currentWorkspace] = hs.window.focusedWindow()
 
-  local targetSlot = workspaceSlot[n]  -- nil if n is not currently visible
+  local targetSlot = workspaceSlot[n] -- nil if n is not currently visible
 
   if targetSlot then
     -- n is already on a screen: rotate the slot assignments so n lands on slot 1.
     -- Compute shortest rotation distance.
-    -- stepsLeft: shift assignments left by k (slot k+1 → slot 1, etc.)
+    -- stepsLeft: shift assignments left by k (slot k+1 -> slot 1, etc.)
     -- This is equivalent to rotating workspaces CCW (toward primary).
     local stepsLeft  = (targetSlot - 1) % numSlots
     local stepsRight = numSlots - stepsLeft
-    local shift = (stepsLeft <= stepsRight) and stepsLeft or (numSlots - stepsRight)
+    local shift      = (stepsLeft <= stepsRight) and stepsLeft or (numSlots - stepsRight)
 
     -- Rotate: new slot i gets the workspace that was at slot ((i-1+shift) % numSlots)+1
     -- Lua % is always non-negative so this works for both directions.
-    local newSlotWs = {}
-    local newWsSlot = {}
+    local newSlotWs  = {}
+    local newWsSlot  = {}
     for i = 1, numSlots do
       local srcSlot = ((i - 1 + shift) % numSlots) + 1
       local ws = slotWorkspace[srcSlot]
@@ -227,7 +252,6 @@ local function showWorkspace(n)
     end
     slotWorkspace = newSlotWs
     workspaceSlot = newWsSlot
-
   else
     -- n is not visible: evict slot 1 (primary), assign n there.
     -- Secondary slots keep whatever they currently have.
@@ -238,25 +262,10 @@ local function showWorkspace(n)
     end
     slotWorkspace[1] = n
     workspaceSlot[n] = 1
-
-    -- Fill any empty secondary slots with sequential workspaces not already visible.
-    -- This handles the initial state where slots 2..N have never been assigned.
-    local nextWs = 1
-    for slotIdx = 2, numSlots do
-      if not slotWorkspace[slotIdx] then
-        -- Find next workspace number not already in a slot
-        while workspaceSlot[nextWs] ~= nil or nextWs == n do
-          nextWs = nextWs + 1
-          if nextWs > maxWorkspaces then break end
-        end
-        if nextWs <= maxWorkspaces then
-          slotWorkspace[slotIdx] = nextWs
-          workspaceSlot[nextWs] = slotIdx
-          nextWs = nextWs + 1
-        end
-      end
-    end
   end
+
+  -- Always reconcile: fill any empty slots, prune any excess slots
+  ensureSlotsFilled(numSlots)
 
   currentWorkspace = n
 
@@ -275,9 +284,7 @@ local function showWorkspace(n)
   end
 end
 
--- ---------------------------------------------------------------------------
 -- Assign window to workspace
--- ---------------------------------------------------------------------------
 
 local function assignWindowToWorkspace(n)
   local win = hs.window.focusedWindow()
@@ -289,9 +296,7 @@ local function assignWindowToWorkspace(n)
   windowsPosition[id] = win:frame()
 end
 
--- ---------------------------------------------------------------------------
 -- Screen change: re-derive slots and reapply
--- ---------------------------------------------------------------------------
 
 hs.screen.watcher.new(function()
   -- Reset slot state and force re-layout on the current workspace.
@@ -302,9 +307,7 @@ hs.screen.watcher.new(function()
   showWorkspace(ws)
 end):start()
 
--- ---------------------------------------------------------------------------
 -- Hotkeys: workspace switching and assignment
--- ---------------------------------------------------------------------------
 
 for i = 1, maxWorkspaces do
   hs.hotkey.bind({ "alt" }, tostring(i), function()
@@ -319,9 +322,7 @@ hs.hotkey.bind({ "alt", "shift" }, tostring(0), function()
   assignWindowToWorkspace(0)
 end)
 
--- ---------------------------------------------------------------------------
 -- Window movement between physical screens
--- ---------------------------------------------------------------------------
 
 hs.hotkey.bind({ "alt" }, "h", function()
   hs.window.focusedWindow():moveOneScreenWest()
@@ -336,9 +337,7 @@ hs.hotkey.bind({ "alt" }, "j", function()
   hs.window.focusedWindow():moveOneScreenSouth()
 end)
 
--- ---------------------------------------------------------------------------
 -- Window snapping / resizing
--- ---------------------------------------------------------------------------
 
 local function resize_window(position)
   local win    = hs.window.focusedWindow()
@@ -347,15 +346,15 @@ local function resize_window(position)
   local f      = win:frame()
 
   if position == "l" then
-    f.x = max.x;          f.y = max.y; f.w = max.w / 2; f.h = max.h
+    f.x = max.x; f.y = max.y; f.w = max.w / 2; f.h = max.h
   elseif position == "r" then
     f.x = max.x + max.w / 2; f.y = max.y; f.w = max.w / 2; f.h = max.h
   elseif position == "t" then
-    f.x = max.x;          f.y = max.y; f.w = max.w;    f.h = max.h / 2
+    f.x = max.x; f.y = max.y; f.w = max.w; f.h = max.h / 2
   elseif position == "b" then
-    f.x = max.x;          f.y = max.y + max.h / 2; f.w = max.w; f.h = max.h / 2
+    f.x = max.x; f.y = max.y + max.h / 2; f.w = max.w; f.h = max.h / 2
   elseif position == "f" then
-    f.x = max.x;          f.y = max.y; f.w = max.w;    f.h = max.h
+    f.x = max.x; f.y = max.y; f.w = max.w; f.h = max.h
   else
     hs.alert.show("Incorrect direction: " .. position)
     return
@@ -367,7 +366,7 @@ hs.hotkey.bind({ "alt", "shift" }, "h", function() resize_window("l") end)
 hs.hotkey.bind({ "alt", "shift" }, "l", function() resize_window("r") end)
 hs.hotkey.bind({ "alt", "shift" }, "k", function() resize_window("t") end)
 hs.hotkey.bind({ "alt", "shift" }, "j", function() resize_window("b") end)
-hs.hotkey.bind({ "alt" },          "f", function() resize_window("f") end)
+hs.hotkey.bind({ "alt" }, "f", function() resize_window("f") end)
 
 -- Recover all visible windows to center
 hs.hotkey.bind({ "alt", "cmd" }, "r", function()
@@ -384,14 +383,12 @@ hs.hotkey.bind({ "alt", "cmd" }, "r", function()
   hs.alert.show("Windows recovered 🔥")
 end)
 
--- ---------------------------------------------------------------------------
 -- Drawing tool
--- ---------------------------------------------------------------------------
 
-hs.hotkey.bind({ "alt", "shift" }, "p", function()
-  local drawing_path = os.getenv("HOME") .. "/proj/cont/drawonscreen_rust/target/release/drawonscreen_rust"
+hs.hotkey.bind({ "alt" }, "p", function()
+  local drawing_path = os.getenv("HOME") .. "/.local/bin/just_draw"
   local task = hs.task.new(drawing_path, function(code, _, stderr)
-    if code ~= 0 then hs.notify.show("Rust drawonscreen", stderr) end
+    if code ~= 0 then hs.notify.show("Just Draw", stderr) end
   end)
 
   local prev_win = hs.window.focusedWindow()
@@ -402,7 +399,7 @@ hs.hotkey.bind({ "alt", "shift" }, "p", function()
     while true do
       hs.execute("sleep 0.2")
       local win = hs.window.focusedWindow()
-      if win and win:title():find("Draw%sOn%sScreen") then
+      if win and win:title():find("JUST%sDRAW") then
         draw_win = win
         break
       end
@@ -413,17 +410,15 @@ hs.hotkey.bind({ "alt", "shift" }, "p", function()
       end
       attempt = attempt + 1
     end
-    assignWindowToWorkspace(4)
+    assignWindowToWorkspace(9)
     if prev_win then prev_win:focus() end
-    showWorkspace(4)
+    showWorkspace(9)
     if draw_win then draw_win:focus() end
     resize_window("f")
   end
 end)
 
--- ---------------------------------------------------------------------------
 -- Mouse highlight
--- ---------------------------------------------------------------------------
 
 local mouseCircle      = nil
 local mouseCircleTimer = nil
@@ -446,21 +441,17 @@ local function mouseHighlight()
   end)
 end
 
-hs.hotkey.bind({ "cmd", "ctrl", "shift" }, "D", mouseHighlight)
+hs.hotkey.bind({ "alt", "shift" }, "c", mouseHighlight)
 
--- ---------------------------------------------------------------------------
 -- Spotify controls
--- ---------------------------------------------------------------------------
 
 hs.hotkey.bind({ "alt" }, "space", function() hs.execute("spotify_player playback play-pause", true) end)
-hs.hotkey.bind({ "alt" }, "[",     function() hs.execute("spotify_player playback previous",   true) end)
-hs.hotkey.bind({ "alt" }, "]",     function() hs.execute("spotify_player playback next",        true) end)
-hs.hotkey.bind({ "alt" }, "-",     function() hs.execute("spotify_player playback volume --offset -- -5", true) end)
-hs.hotkey.bind({ "alt" }, "=",     function() hs.execute("spotify_player playback volume --offset 5",     true) end)
+hs.hotkey.bind({ "alt" }, "[", function() hs.execute("spotify_player playback previous", true) end)
+hs.hotkey.bind({ "alt" }, "]", function() hs.execute("spotify_player playback next", true) end)
+hs.hotkey.bind({ "alt" }, "-", function() hs.execute("spotify_player playback volume --offset -- -5", true) end)
+hs.hotkey.bind({ "alt" }, "=", function() hs.execute("spotify_player playback volume --offset 5", true) end)
 
--- ---------------------------------------------------------------------------
 -- jn timer integration
--- ---------------------------------------------------------------------------
 
 local function initJn(category)
   local b, description = hs.dialog.textPrompt(
@@ -504,9 +495,7 @@ hs.hotkey.bind({ "alt" }, ",", function()
   initJn(category)
 end)
 
--- ---------------------------------------------------------------------------
 -- Bootstrap on load
--- ---------------------------------------------------------------------------
 
 hs.timer.doAfter(0.5, function()
   -- Force entry into showWorkspace on first load
@@ -519,6 +508,7 @@ hs.application.enableSpotlightForNameSearches(true)
 hs.loadSpoon('ControlEscape'):start()
 
 -- Neospeller
+
 hs.hotkey.bind({ "alt" }, "g", function()
   hs.execute("~/.local/bin/ns-clip", true)
 end)
