@@ -227,22 +227,23 @@ local function showWorkspace(n)
   -- Save focused window of current workspace before switching
   focusedWindow[currentWorkspace] = hs.window.focusedWindow()
 
+  -- Reconcile slot state BEFORE any rotation or eviction.
+  -- This guarantees the maps are hole-free when rotation reads them.
+  ensureSlotsFilled(numSlots)
+
   local targetSlot = workspaceSlot[n] -- nil if n is not currently visible
 
   if targetSlot then
-    -- n is already on a screen: rotate the slot assignments so n lands on slot 1.
-    -- Compute shortest rotation distance.
-    -- stepsLeft: shift assignments left by k (slot k+1 -> slot 1, etc.)
-    -- This is equivalent to rotating workspaces CCW (toward primary).
+    -- n is already on a screen: rotate so n lands on slot 1 (primary).
+    -- Shortest path: compare steps left (CCW) vs right (CW).
     local stepsLeft  = (targetSlot - 1) % numSlots
     local stepsRight = numSlots - stepsLeft
-    local shift      = (stepsLeft <= stepsRight) and stepsLeft or (numSlots - stepsRight)
+    local shift      = (stepsLeft <= stepsRight) and stepsLeft or stepsRight
 
-    -- Rotate: new slot i gets the workspace that was at slot ((i-1+shift) % numSlots)+1
-    -- Lua % is always non-negative so this works for both directions.
     local newSlotWs  = {}
     local newWsSlot  = {}
     for i = 1, numSlots do
+      -- shift left by `shift`: slot i reads from slot ((i-1+shift) % numSlots)+1
       local srcSlot = ((i - 1 + shift) % numSlots) + 1
       local ws = slotWorkspace[srcSlot]
       if ws ~= nil then
@@ -253,8 +254,8 @@ local function showWorkspace(n)
     slotWorkspace = newSlotWs
     workspaceSlot = newWsSlot
   else
-    -- n is not visible: evict slot 1 (primary), assign n there.
-    -- Secondary slots keep whatever they currently have.
+    -- n is not currently visible: evict slot 1, put n there.
+    -- Secondary slots are already filled by ensureSlotsFilled above.
     local evicted = slotWorkspace[1]
     if evicted then
       hideWorkspace(evicted)
@@ -263,9 +264,6 @@ local function showWorkspace(n)
     slotWorkspace[1] = n
     workspaceSlot[n] = 1
   end
-
-  -- Always reconcile: fill any empty slots, prune any excess slots
-  ensureSlotsFilled(numSlots)
 
   currentWorkspace = n
 
