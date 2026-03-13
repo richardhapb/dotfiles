@@ -8,10 +8,9 @@ end)
 
 hs.window.animationDuration = 0
 
-local workspaceDataFile = os.getenv("HOME") .. "/.hammerspoon/workspaces.json"
-local json = hs.json
+local workspaceDataFile     = os.getenv("HOME") .. "/.hammerspoon/workspaces.json"
+local json                  = hs.json
 
--- Load saved workspace data
 local function loadWorkspaceData()
   local file = io.open(workspaceDataFile, "r")
   if not file then return {} end
@@ -20,143 +19,109 @@ local function loadWorkspaceData()
   return json.decode(content) or {}
 end
 
-local workspaces      = loadWorkspaceData() -- windowId -> workspace number
-local maxWorkspaces   = 9
-local windowsPosition = {}                  -- windowId -> last known frame (on-screen)
-local focusedWindow   = {}                  -- workspace number -> last focused window
-
--- Metatables same as before
-windowsPosition       = setmetatable(windowsPosition, {
-  __index = function(t, k)
-    local v = rawget(t, k)
-    if v ~= nil then return v end
-    for _, win in ipairs(hs.window.allWindows()) do
-      if tostring(win:id()) == k then
-        local frame = win:frame()
-        -- If window is already offscreen, use its screen full frame instead
-        if frame.x >= 20000 or frame.y >= 20000 then
-          local screen = win:screen() or hs.screen.primaryScreen()
-          frame = screen:frame()
-        end
-        rawset(t, k, frame)
-        return frame
-      end
-    end
-    print("Window not found for id:", k)
-    return nil
-  end
-})
-
-focusedWindow         = setmetatable(focusedWindow, {
-  __index = function(t, k)
-    local v = rawget(t, k)
-    if v then return v end
-    return hs.window.focusedWindow()
-  end
-})
+local workspaces    = loadWorkspaceData() -- windowId -> workspace number
+local maxWorkspaces = 9
 
 local function saveWorkspaceData(data)
   local encoded = hs.json.encode(data)
   if not encoded then
-    hs.alert.show("⚠️ JSON encoding failed")
-    return
+    hs.alert.show("⚠️ JSON encoding failed"); return
   end
   local file, err = io.open(workspaceDataFile, "w+")
   if not file then
-    hs.alert.show("⚠️ File write failed: " .. (err or "unknown"))
-    return
+    hs.alert.show("⚠️ File write failed: " .. (err or "unknown")); return
   end
   file:write(encoded)
   file:close()
 end
 
--- Screen slot management
+-- ---------------------------------------------------------------------------
+-- State
+--
+-- screenWorkspace[screenId] = workspace number currently displayed on that screen
+-- workspaceScreen[wsNum]    = screenId currently displaying that workspace (nil if hidden)
+-- ---------------------------------------------------------------------------
 
--- Returns screens sorted clockwise starting from primary.
--- Clockwise angle is computed from the centroid of all screens.
-local function getScreenSlots()
-  local primary = hs.screen.primaryScreen()
-  local all     = hs.screen.allScreens()
+local screenWorkspace  = {}
+local workspaceScreen  = {}
+local lastFocused      = {}  -- workspace number -> last focused hs.window
+local currentWorkspace = 1
+local lastPivotScreen  = nil -- screen that was active on last showWorkspace call
 
-  if #all == 1 then return { primary } end
+local OFFSCREEN_X      = 30000
+local OFFSCREEN_Y      = 30000
 
-  -- Compute centroid of all screen centers
-  local cx, cy = 0, 0
-  for _, s in ipairs(all --[[@as table]]) do
-    local f = s:frame()
-    cx = cx + f.x + f.w / 2
-    cy = cy + f.y + f.h / 2
+-- ---------------------------------------------------------------------------
+-- Helpers
+-- ---------------------------------------------------------------------------
+
+local function screenId(screen)
+  return tostring(screen:id())
+end
+
+local function getScreenById(sid)
+  for _, s in ipairs(hs.screen.allScreens() --[[@as table]]) do
+    if screenId(s) == sid then return s end
   end
-  cx = cx / #all
-  cy = cy / #all
+  return nil
+end
 
-  -- Angle of each screen center relative to centroid
-  -- atan2 gives CCW from east; we want CW from north so we negate and offset
-  local function angle(s)
-    local f = s:frame()
-    local dx = (f.x + f.w / 2) - cx
-    local dy = (f.y + f.h / 2) - cy
-    -- CW from north: atan2(dx, -dy), normalised to [0, 2\pi)
-    -- math.atan(y,x) is Lua 5.3+ two-arg form; alias cast silences EmmyLua 1-arg stub
-    local atan2 = math.atan --[[@as fun(y:number,x:number):number]]
-    local a = atan2(dx, -dy)
-    -- transform to positive preserving the angle
-    if a < 0 then a = a + 2 * math.pi end
-    return a
-  end
-
-  -- Primary always goes first (slot 0); rest sorted by CW angle relative to primary
-  local primaryAngle = angle(primary)
-  local others = {}
-  for _, s in ipairs(all --[[@as table]]) do
-    if s ~= primary then
-      local a = angle(s) - primaryAngle
-      if a < 0 then a = a + 2 * math.pi end
-      table.insert(others, { screen = s, a = a })
+local function focusedScreen()
+  local fw = hs.window.focusedWindow()
+  if fw then
+    -- Only trust focusedWindow's screen when the current workspace has windows.
+    -- When the current workspace is empty, macOS OS-focus drifts to a window on
+    -- another screen (nothing to focus here); fall through to lastPivotScreen so
+    -- the next switch stays on the screen the user was on.
+    for _, win in ipairs(hs.window.allWindows() --[[@as table]]) do
+      if workspaces[tostring(win:id())] == currentWorkspace then
+        return fw:screen()
+      end
     end
   end
-  table.sort(others, function(a, b) return a.a < b.a end)
+  if lastPivotScreen then return lastPivotScreen end
+  if fw then return fw:screen() end
+  return hs.screen.primaryScreen()
+end
 
-  local slots = { primary }
-  for _, o in ipairs(others) do
-    table.insert(slots, o.screen)
+local function bindScreenWorkspace(screen, wsNum)
+  local sid = screenId(screen)
+  screenWorkspace[sid] = wsNum
+  workspaceScreen[wsNum] = sid
+end
+
+local function unbindWorkspace(wsNum)
+  local sid = workspaceScreen[wsNum]
+  if sid then
+    screenWorkspace[sid] = nil
+    workspaceScreen[wsNum] = nil
   end
-  return slots
 end
 
--- slotWorkspace[i] = workspace number currently shown on slot i (1-indexed)
--- nil means the slot is empty (no workspace assigned yet)
-local slotWorkspace = {} -- slot index -> ws number
-local workspaceSlot = {} -- ws number  -> slot index
-
--- initSlots does NOT pre-fill secondary slots.
--- Slots are filled lazily as workspaces are shown via showWorkspace.
--- On screen count change we only reset if we have more screens than tracked slots,
--- preserving slot 1 (primary) assignment.
-local function initSlots()
-  slotWorkspace = {}
-  workspaceSlot = {}
+-- Lazily assign an unassigned window to the workspace currently showing on its screen.
+-- This ensures windows opened without explicit assignment are tracked correctly.
+-- Skips windows already parked offscreen — macOS reports those as being on the
+-- primary screen, which would cause them to be mis-assigned to workspace 1.
+local function autoAssignWindow(win)
+  local id = tostring(win:id())
+  if workspaces[id] ~= nil then return end
+  local f = win:frame()
+  if f.x >= OFFSCREEN_X - 1000 or f.y >= OFFSCREEN_Y - 1000 then return end
+  local s = win:screen()
+  if not s then return end
+  local ws = screenWorkspace[screenId(s)]
+  if ws then
+    workspaces[id] = ws
+  end
 end
 
-initSlots()
-
--- Window positioning helpers
-
-local OFFSCREEN_X = 30000
-local OFFSCREEN_Y = 30000
-
--- Move all windows of a workspace offscreen.
--- Only saves position if the window is currently on a real screen (not already hidden).
+-- Move all windows of wsNum offscreen
 local function hideWorkspace(wsNum)
   for _, win in ipairs(hs.window.allWindows()) do
+    autoAssignWindow(win)
     local id = tostring(win:id())
     if workspaces[id] == wsNum then
       local f = win:frame()
-      -- A window is on-screen when its coords are well below the offscreen sentinel.
-      -- Using 20000 as threshold leaves plenty of headroom vs real screen coords.
-      if f.x < 20000 and f.y < 20000 then
-        windowsPosition[id] = win:frame()
-      end
       f.x = OFFSCREEN_X
       f.y = OFFSCREEN_Y
       win:setFrame(f)
@@ -164,13 +129,11 @@ local function hideWorkspace(wsNum)
   end
 end
 
--- Place all windows of wsNum filling the given screen.
--- Does NOT save position here -- windowsPosition is the canonical "last real frame"
--- and must only be written when a window is known to be on a real screen (hideWorkspace above).
--- app:activate() is intentionally omitted; focus is managed by showWorkspace after placement.
-local function placeWorkspaceOnScreen(wsNum, screen)
+-- Place all windows of wsNum filling the given screen
+local function showWorkspaceOnScreen(wsNum, screen)
   local max = screen:frame()
   for _, win in ipairs(hs.window.allWindows()) do
+    autoAssignWindow(win)
     local id = tostring(win:id())
     if workspaces[id] == wsNum then
       local f = win:frame()
@@ -183,106 +146,121 @@ local function placeWorkspaceOnScreen(wsNum, screen)
   end
 end
 
--- Core workspace switcher
-
-local currentWorkspace = 1
-
--- Ensure every screen slot has a workspace assigned, using workspaces not
--- currently visible. Skips slot 1 (primary) — that is always managed explicitly.
--- Also prunes stale slots if screen count shrank.
-local function ensureSlotsFilled(numSlots)
-  -- Remove slots that no longer correspond to a screen
-  for slotIdx, wsNum in pairs(slotWorkspace) do
-    if slotIdx > numSlots then
-      hideWorkspace(wsNum)
-      workspaceSlot[wsNum] = nil
-      slotWorkspace[slotIdx] = nil
+-- Focus the last known window for wsNum, or any window of wsNum.
+-- We trust the workspace assignment rather than win:screen() because macOS
+-- doesn't update win:screen() synchronously after setFrame — checking it
+-- here would cause the fallback to miss the window and never call focus(),
+-- leaving the previous window raised on top of the newly placed one.
+-- If the workspace has no windows, warp the mouse to that screen so macOS
+-- keeps it as the active screen — preventing focusedScreen() from drifting.
+local function focusWorkspaceOnScreen(wsNum, screen)
+  local fw = lastFocused[wsNum]
+  if fw and fw:isVisible() and workspaces[tostring(fw:id())] == wsNum then
+    fw:focus()
+    return
+  end
+  for _, win in ipairs(hs.window.allWindows()) do
+    local id = tostring(win:id())
+    if workspaces[id] == wsNum and win:isVisible() then
+      win:focus()
+      return
     end
   end
+  -- No windows: warp mouse so macOS treats this screen as active.
+  local f = screen:frame()
+  hs.mouse.absolutePosition({ x = f.x + f.w / 2, y = f.y + f.h / 2 })
+end
 
-  -- Fill empty slots 2..numSlots
-  local nextWs = 1
-  for slotIdx = 2, numSlots do
-    if not slotWorkspace[slotIdx] then
-      -- Advance nextWs to one that is not already assigned to any slot
-      while nextWs <= maxWorkspaces and workspaceSlot[nextWs] ~= nil do
-        nextWs = nextWs + 1
+-- Assign sequential workspaces to all screens. Called on load and screen change.
+-- Primary screen keeps currentWorkspace; others get the next free workspaces.
+local function bootstrapScreens()
+  screenWorkspace = {}
+  workspaceScreen = {}
+  lastPivotScreen = nil
+  local primary = hs.screen.primaryScreen()
+  bindScreenWorkspace(primary, currentWorkspace)
+  local wsIdx = 1
+  for _, screen in ipairs(hs.screen.allScreens() --[[@as table]]) do
+    if screen ~= primary then
+      while wsIdx == currentWorkspace or workspaceScreen[wsIdx] ~= nil do
+        wsIdx = wsIdx + 1
+        if wsIdx > maxWorkspaces then break end
       end
-      if nextWs <= maxWorkspaces then
-        slotWorkspace[slotIdx] = nextWs
-        workspaceSlot[nextWs] = slotIdx
-        nextWs = nextWs + 1
+      if wsIdx <= maxWorkspaces then
+        bindScreenWorkspace(screen, wsIdx)
+        wsIdx = wsIdx + 1
       end
     end
   end
 end
 
+-- ---------------------------------------------------------------------------
+-- Core switcher
+--
+-- Invariant: workspace n goes to the focused screen.
+-- If n is already visible on another screen, swap that screen with the focused screen.
+-- If n is hidden, evict the focused screen's current workspace and show n there.
+-- Focus stays on the pivot (focused) screen after the switch.
+-- ---------------------------------------------------------------------------
+
 local function showWorkspace(n)
-  if n == 0 then return end -- 0 is frozen/pinned
-  if n == currentWorkspace then return end
+  if n == 0 then return end
 
-  local slots = getScreenSlots()
-  local numSlots = #slots
+  local pivot   = focusedScreen()
+  local pivSid  = screenId(pivot)
+  local pivWs   = screenWorkspace[pivSid] -- workspace currently on pivot (may be nil)
 
-  -- Save focused window of current workspace before switching
-  focusedWindow[currentWorkspace] = hs.window.focusedWindow()
+  -- Save the focused window under the workspace that is actually on the pivot screen.
+  -- Using currentWorkspace here would be wrong when the focused screen was assigned
+  -- its workspace by bootstrap rather than by a prior showWorkspace call.
+  lastFocused[pivWs or currentWorkspace] = hs.window.focusedWindow()
 
-  -- Reconcile slot state BEFORE any rotation or eviction.
-  -- This guarantees the maps are hole-free when rotation reads them.
-  ensureSlotsFilled(numSlots)
+  -- Already showing on the focused screen — just ensure focus and update state.
+  if pivWs == n then
+    currentWorkspace = n
+    lastPivotScreen  = pivot
+    focusWorkspaceOnScreen(n, pivot)
+    return
+  end
 
-  local targetSlot = workspaceSlot[n] -- nil if n is not currently visible
+  local targetSid = workspaceScreen[n] -- screen currently showing ws n (nil if hidden)
 
-  if targetSlot then
-    -- n is already on a screen: rotate so n lands on slot 1 (primary).
-    -- Shortest path: compare steps left (CCW) vs right (CW).
-    local stepsLeft  = (targetSlot - 1) % numSlots
-    local stepsRight = numSlots - stepsLeft
-    local shift      = (stepsLeft <= stepsRight) and stepsLeft or stepsRight
-
-    local newSlotWs  = {}
-    local newWsSlot  = {}
-    for i = 1, numSlots do
-      -- shift left by `shift`: slot i reads from slot ((i-1+shift) % numSlots)+1
-      local srcSlot = ((i - 1 + shift) % numSlots) + 1
-      local ws = slotWorkspace[srcSlot]
-      if ws ~= nil then
-        newSlotWs[i] = ws
-        newWsSlot[ws] = i
+  if targetSid and targetSid ~= pivSid then
+    -- ws n is visible on a different screen: swap the two workspaces.
+    local targetScreen = getScreenById(targetSid)
+    if targetScreen then
+      -- Bind pivot to n first (overwrites workspaceScreen[n] = pivSid)
+      bindScreenWorkspace(pivot, n)
+      if pivWs then
+        -- Send pivWs to the target screen
+        bindScreenWorkspace(targetScreen, pivWs)
+        showWorkspaceOnScreen(pivWs, targetScreen)
+      else
+        -- Pivot had no workspace: clear the stale screenWorkspace entry on target
+        screenWorkspace[targetSid] = nil
       end
+      showWorkspaceOnScreen(n, pivot)
     end
-    slotWorkspace = newSlotWs
-    workspaceSlot = newWsSlot
   else
-    -- n is not currently visible: evict slot 1, put n there.
-    -- Secondary slots are already filled by ensureSlotsFilled above.
-    local evicted = slotWorkspace[1]
-    if evicted then
-      hideWorkspace(evicted)
-      workspaceSlot[evicted] = nil
+    -- ws n is hidden (or somehow already on pivot): evict and show
+    if pivWs and pivWs ~= n then
+      hideWorkspace(pivWs)
+      unbindWorkspace(pivWs)
     end
-    slotWorkspace[1] = n
-    workspaceSlot[n] = 1
+    bindScreenWorkspace(pivot, n)
+    showWorkspaceOnScreen(n, pivot)
   end
 
   currentWorkspace = n
-
-  -- Apply all slot assignments to their screens
-  for slotIdx, wsNum in pairs(slotWorkspace) do
-    if slots[slotIdx] then
-      placeWorkspaceOnScreen(wsNum, slots[slotIdx])
-    end
-  end
-
+  lastPivotScreen  = pivot
   hs.alert.show("Workspace " .. n)
 
-  local fw = focusedWindow[n]
-  if fw and fw:isVisible() then
-    fw:focus()
-  end
+  focusWorkspaceOnScreen(n, pivot)
 end
 
+-- ---------------------------------------------------------------------------
 -- Assign window to workspace
+-- ---------------------------------------------------------------------------
 
 local function assignWindowToWorkspace(n)
   local win = hs.window.focusedWindow()
@@ -291,21 +269,76 @@ local function assignWindowToWorkspace(n)
   workspaces[id] = n
   hs.alert.show("Window assigned to Workspace " .. n)
   saveWorkspaceData(workspaces)
-  windowsPosition[id] = win:frame()
 end
 
--- Screen change: re-derive slots and reapply
+-- ---------------------------------------------------------------------------
+-- Screen change: reconcile existing bindings rather than full reset.
+--
+-- Preserves screen->workspace assignments for screens still connected.
+-- Hides (parks offscreen) workspaces whose screen disappeared.
+-- Assigns a free workspace to any newly appeared screen.
+-- Ensures currentWorkspace always has a screen.
+-- ---------------------------------------------------------------------------
+
+local function reconcileScreens()
+  local allScreens  = hs.screen.allScreens()
+  local presentSids = {}
+  for _, s in ipairs(allScreens --[[@as table]]) do
+    presentSids[screenId(s)] = s
+  end
+
+  -- Collect workspaces whose screen has gone away (snapshot before mutating)
+  local toHide = {}
+  for wsNum, sid in pairs(workspaceScreen) do
+    if not presentSids[sid] then
+      table.insert(toHide, wsNum)
+    end
+  end
+  for _, wsNum in ipairs(toHide) do
+    hideWorkspace(wsNum)
+    unbindWorkspace(wsNum)
+  end
+
+  -- Assign a free workspace to each screen that currently has none
+  for sid, screen in pairs(presentSids) do
+    if not screenWorkspace[sid] then
+      for wsIdx = 1, maxWorkspaces do
+        if workspaceScreen[wsIdx] == nil then
+          bindScreenWorkspace(screen, wsIdx)
+          break
+        end
+      end
+    end
+  end
+
+  -- Ensure currentWorkspace is still on a screen; reclaim primary if not
+  if not workspaceScreen[currentWorkspace] then
+    local primary = hs.screen.primaryScreen()
+    local primSid = screenId(primary)
+    local oldWs   = screenWorkspace[primSid]
+    if oldWs then
+      hideWorkspace(oldWs)
+      unbindWorkspace(oldWs)
+    end
+    bindScreenWorkspace(primary, currentWorkspace)
+  end
+
+  lastPivotScreen = nil
+
+  -- Re-place windows on all screens
+  for _, screen in ipairs(allScreens --[[@as table]]) do
+    local ws = screenWorkspace[screenId(screen)]
+    if ws then showWorkspaceOnScreen(ws, screen) end
+  end
+end
 
 hs.screen.watcher.new(function()
-  -- Reset slot state and force re-layout on the current workspace.
-  -- We temporarily clear currentWorkspace so showWorkspace doesn't early-exit.
-  initSlots()
-  local ws = currentWorkspace
-  currentWorkspace = -1
-  showWorkspace(ws)
+  reconcileScreens()
 end):start()
 
--- Hotkeys: workspace switching and assignment
+-- ---------------------------------------------------------------------------
+-- Hotkeys
+-- ---------------------------------------------------------------------------
 
 for i = 1, maxWorkspaces do
   hs.hotkey.bind({ "alt" }, tostring(i), function()
@@ -321,22 +354,38 @@ hs.hotkey.bind({ "alt", "shift" }, tostring(0), function()
 end)
 
 -- Window movement between physical screens
+-- Reassign the window to the workspace of its destination screen so the
+-- workspace state stays consistent with where the window actually landed.
+local function moveWindowToScreen(win, destScreen, moveFn)
+  if not win then return end
+  moveFn(win)
+  if destScreen then
+    local ws = screenWorkspace[screenId(destScreen)]
+    if ws then
+      workspaces[tostring(win:id())] = ws
+      saveWorkspaceData(workspaces)
+    end
+  end
+end
 
 hs.hotkey.bind({ "alt" }, "h", function()
-  hs.window.focusedWindow():moveOneScreenWest()
+  local w = hs.window.focusedWindow()
+  moveWindowToScreen(w, w and w:screen():toWest(), function(win) win:moveOneScreenWest() end)
 end)
 hs.hotkey.bind({ "alt" }, "l", function()
-  hs.window.focusedWindow():moveOneScreenEast()
+  local w = hs.window.focusedWindow()
+  moveWindowToScreen(w, w and w:screen():toEast(), function(win) win:moveOneScreenEast() end)
 end)
 hs.hotkey.bind({ "alt" }, "k", function()
-  hs.window.focusedWindow():moveOneScreenNorth()
+  local w = hs.window.focusedWindow()
+  moveWindowToScreen(w, w and w:screen():toNorth(), function(win) win:moveOneScreenNorth() end)
 end)
 hs.hotkey.bind({ "alt" }, "j", function()
-  hs.window.focusedWindow():moveOneScreenSouth()
+  local w = hs.window.focusedWindow()
+  moveWindowToScreen(w, w and w:screen():toSouth(), function(win) win:moveOneScreenSouth() end)
 end)
 
 -- Window snapping / resizing
-
 local function resize_window(position)
   local win    = hs.window.focusedWindow()
   local screen = win:screen()
@@ -382,7 +431,6 @@ hs.hotkey.bind({ "alt", "cmd" }, "r", function()
 end)
 
 -- Drawing tool
-
 hs.hotkey.bind({ "alt" }, "p", function()
   local drawing_path = os.getenv("HOME") .. "/.local/bin/just_draw"
   local task = hs.task.new(drawing_path, function(code, _, stderr)
@@ -417,7 +465,6 @@ hs.hotkey.bind({ "alt" }, "p", function()
 end)
 
 -- Mouse highlight
-
 local mouseCircle      = nil
 local mouseCircleTimer = nil
 
@@ -441,22 +488,83 @@ end
 
 hs.hotkey.bind({ "alt", "shift" }, "c", mouseHighlight)
 
--- Spotify controls
+-- Apple Music controls
+hs.hotkey.bind({ "alt" }, "space", function() hs.itunes.playpause() end)
+hs.hotkey.bind({ "alt" }, "[", function() hs.itunes.previous() end)
+hs.hotkey.bind({ "alt" }, "]", function() hs.itunes.next() end)
+hs.hotkey.bind({ "alt" }, "-", function() hs.itunes.setVolume(math.max(0, hs.itunes.getVolume() - 5)) end)
+hs.hotkey.bind({ "alt" }, "=", function() hs.itunes.setVolume(math.min(100, hs.itunes.getVolume() + 5)) end)
+hs.hotkey.bind({ "alt", "shift" }, "[", function()
+  local ok, _, err = hs.osascript.applescript([[
+    tell application "Music"
+      set favorited of current track to true
+    end tell
+  ]])
+  if ok then hs.alert.show("Liked") else hs.alert.show("Like error: " .. (err or "")) end
+end)
+hs.hotkey.bind({ "alt", "shift" }, "\\", function()
+  local ok, _, err = hs.osascript.applescript([[
+    tell application "Music"
+      set disliked of current track to true
+    end tell
+  ]])
+  if ok then hs.alert.show("Disliked") else hs.alert.show("Dislike error: " .. (err or "")) end
+end)
+hs.hotkey.bind({ "alt", "shift" }, "]", function()
+  local prev = hs.window.focusedWindow()
 
-hs.hotkey.bind({ "alt" }, "space", function() hs.execute("spotify_player playback play-pause", true) end)
-hs.hotkey.bind({ "alt" }, "[", function() hs.execute("spotify_player playback previous", true) end)
-hs.hotkey.bind({ "alt" }, "]", function() hs.execute("spotify_player playback next", true) end)
-hs.hotkey.bind({ "alt" }, "-", function() hs.execute("spotify_player playback volume --offset -- -5", true) end)
-hs.hotkey.bind({ "alt" }, "=", function() hs.execute("spotify_player playback volume --offset 5", true) end)
+  local ok, playlists = hs.osascript.applescript([[
+    tell application "Music" to return name of every user playlist
+  ]])
+  if not ok or not playlists then hs.alert.show("Could not fetch playlists") return end
+
+  local choices = {}
+  for _, name in ipairs(playlists) do
+    table.insert(choices, { text = name })
+  end
+
+  local chooser = hs.chooser.new(function(choice)
+    if not choice then
+      if prev then prev:focus() end
+      return
+    end
+    local playlist = choice.text
+    local ok2, _, err = hs.osascript.applescript(string.format([[
+      tell application "Music" to activate
+      tell application "System Events"
+        tell process "Music"
+          set sg to splitter group 1 of window 1
+          set playbackBtns to every button of group 1 of group 2 of sg
+          set moreBtn to missing value
+          repeat with b in playbackBtns
+            if description of b is "More" then
+              set moreBtn to b
+              exit repeat
+            end if
+          end repeat
+          if moreBtn is missing value then error "More button not found"
+          click moreBtn
+          delay 0.2
+          set m to menu 1 of moreBtn
+          click menu item "%s" of menu 1 of menu item "Add to Playlist" of m
+        end tell
+      end tell
+    ]], playlist))
+    if prev then prev:focus() end
+    if ok2 then hs.alert.show("Added to " .. playlist) else hs.alert.show("Playlist error: " .. (err or "")) end
+  end)
+
+  chooser:choices(choices)
+  chooser:show()
+end)
 
 -- jn timer integration
-
 local function initJn(category)
   local b, description = hs.dialog.textPrompt(
     "[" .. category .. "] Insert the description", "Task to do it", "", "OK", "Cancel"
   )
   if b == "Cancel" or not description then
-    focusedWindow[currentWorkspace]:focus()
+    if lastFocused[currentWorkspace] then lastFocused[currentWorkspace]:focus() end
     return
   end
 
@@ -475,11 +583,10 @@ local function initJn(category)
   end, { "3600" }):start()
 
   if not ok then hs.alert.show("Error starting sleep command") end
-
   local _, status = hs.execute(cmd)
   if not status then hs.alert.show("Failed to start detached task") end
 
-  focusedWindow[currentWorkspace]:focus()
+  if lastFocused[currentWorkspace] then lastFocused[currentWorkspace]:focus() end
 end
 
 hs.hotkey.bind({ "alt" }, "/", function() initJn("programming") end)
@@ -487,26 +594,26 @@ hs.hotkey.bind({ "alt" }, ".", function() initJn("work") end)
 hs.hotkey.bind({ "alt" }, ",", function()
   local b, category = hs.dialog.textPrompt("Insert category", "Indicate topic", "work", "OK", "Cancel")
   if b == "Cancel" or not category then
-    focusedWindow[currentWorkspace]:focus()
+    if lastFocused[currentWorkspace] then lastFocused[currentWorkspace]:focus() end
     return
   end
   initJn(category)
 end)
 
--- Bootstrap on load
+-- Neospeller
+hs.hotkey.bind({ "alt" }, "g", function()
+  hs.execute("~/.local/bin/ns-clip", true)
+end)
 
+-- Bootstrap on load
 hs.timer.doAfter(0.5, function()
-  -- Force entry into showWorkspace on first load
-  local ws = currentWorkspace
-  currentWorkspace = -1
-  showWorkspace(ws)
+  bootstrapScreens()
+  for _, screen in ipairs(hs.screen.allScreens() --[[@as table]]) do
+    local sid = screenId(screen)
+    local ws  = screenWorkspace[sid]
+    if ws then showWorkspaceOnScreen(ws, screen) end
+  end
 end)
 
 hs.application.enableSpotlightForNameSearches(true)
 hs.loadSpoon('ControlEscape'):start()
-
--- Neospeller
-
-hs.hotkey.bind({ "alt" }, "g", function()
-  hs.execute("~/.local/bin/ns-clip", true)
-end)
