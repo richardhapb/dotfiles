@@ -384,13 +384,30 @@ end)
 local function moveWindowToScreen(win, destScreen, moveFn)
   if not win then return end
   moveFn(win)
-  if destScreen then
-    local ws = screenWorkspace[screenId(destScreen)]
-    if ws then
-      workspaces[tostring(win:id())] = ws
-      saveWorkspaceData(workspaces)
-    end
+  if not destScreen then return end
+
+  local id        = tostring(win:id())
+  local srcWs     = workspaces[id]
+  if not srcWs then return end
+
+  local destSid   = screenId(destScreen)
+  local destWs    = screenWorkspace[destSid]
+  local srcSid    = workspaceScreen[srcWs]
+  local srcScreen = srcSid and getScreenById(srcSid)
+
+  -- Transfer srcWs to destScreen, swapping with destWs if present.
+  -- This keeps the window in its workspace and moves the workspace to the
+  -- destination screen, so subsequent workspace switches remain consistent.
+  bindScreenWorkspace(destScreen, srcWs)
+  showWorkspaceOnScreen(srcWs, destScreen)
+
+  if srcScreen and destWs then
+    bindScreenWorkspace(srcScreen, destWs)
+    showWorkspaceOnScreen(destWs, srcScreen)
   end
+
+  setActiveScreen(destScreen)
+  saveWorkspaceData(workspaces)
 end
 
 hs.hotkey.bind({ "alt" }, "h", function()
