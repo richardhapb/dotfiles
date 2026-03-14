@@ -8,8 +8,8 @@ end)
 
 hs.window.animationDuration = 0
 
-local workspaceDataFile     = os.getenv("HOME") .. "/.hammerspoon/workspaces.json"
-local json                  = hs.json
+local workspaceDataFile = os.getenv("HOME") .. "/.hammerspoon/workspaces.json"
+local json              = hs.json
 
 local function loadWorkspaceData()
   local file = io.open(workspaceDataFile, "r")
@@ -24,13 +24,9 @@ local maxWorkspaces = 9
 
 local function saveWorkspaceData(data)
   local encoded = hs.json.encode(data)
-  if not encoded then
-    hs.alert.show("⚠️ JSON encoding failed"); return
-  end
+  if not encoded then hs.alert.show("⚠️ JSON encoding failed"); return end
   local file, err = io.open(workspaceDataFile, "w+")
-  if not file then
-    hs.alert.show("⚠️ File write failed: " .. (err or "unknown")); return
-  end
+  if not file then hs.alert.show("⚠️ File write failed: " .. (err or "unknown")); return end
   file:write(encoded)
   file:close()
 end
@@ -38,21 +34,30 @@ end
 -- ---------------------------------------------------------------------------
 -- State
 --
--- screenWorkspace[screenId] = workspace number currently displayed on that screen
--- workspaceScreen[wsNum]    = screenId currently displaying that workspace (nil if hidden)
+-- screenWorkspace[sid]  = workspace number currently shown on that screen
+-- workspaceScreen[wsNum]= screenId currently showing that workspace (nil = hidden)
+-- activeScreen          = the screen the user is actively working on
+--                         maintained proactively; never computed on demand
+-- currentWorkspace      = screenWorkspace[screenId(activeScreen)]
+--                         always derived from activeScreen, never set independently
+--
+-- Invariants (enforced by verifyState):
+--   screenWorkspace[sid] = n  ↔  workspaceScreen[n] = sid
+--   activeScreen is a currently connected screen
+--   currentWorkspace = screenWorkspace[screenId(activeScreen)]
 -- ---------------------------------------------------------------------------
 
 local screenWorkspace  = {}
 local workspaceScreen  = {}
-local lastFocused      = {}  -- workspace number -> last focused hs.window
+local lastFocused      = {}  -- wsNum -> last focused hs.window
+local activeScreen     = nil -- always current; set by watcher + explicit calls
 local currentWorkspace = 1
-local lastPivotScreen  = nil -- screen that was active on last showWorkspace call
 
-local OFFSCREEN_X      = 30000
-local OFFSCREEN_Y      = 30000
+local OFFSCREEN_X = 30000
+local OFFSCREEN_Y = 30000
 
 -- ---------------------------------------------------------------------------
--- Helpers
+-- Core helpers
 -- ---------------------------------------------------------------------------
 
 local function screenId(screen)
@@ -66,42 +71,64 @@ local function getScreenById(sid)
   return nil
 end
 
-local function focusedScreen()
-  local fw = hs.window.focusedWindow()
-  if fw then
-    -- Only trust focusedWindow's screen when the current workspace has windows.
-    -- When the current workspace is empty, macOS OS-focus drifts to a window on
-    -- another screen (nothing to focus here); fall through to lastPivotScreen so
-    -- the next switch stays on the screen the user was on.
-    for _, win in ipairs(hs.window.allWindows() --[[@as table]]) do
-      if workspaces[tostring(win:id())] == currentWorkspace then
-        return fw:screen()
-      end
-    end
-  end
-  if lastPivotScreen then return lastPivotScreen end
-  if fw then return fw:screen() end
-  return hs.screen.primaryScreen()
+-- Authoritative setter for the active screen.
+-- Always use this instead of writing activeScreen directly.
+local function setActiveScreen(screen)
+  if not screen then return end
+  activeScreen = screen
+  local ws = screenWorkspace[screenId(screen)]
+  if ws then currentWorkspace = ws end
 end
 
+-- Verify bidirectional consistency of the maps and that activeScreen is live.
+-- Repairs in-place and alerts on any violation so bugs surface immediately.
+local function verifyState()
+  for sid, ws in pairs(screenWorkspace) do
+    if workspaceScreen[ws] ~= sid then
+      hs.alert.show("⚠ ws: sw[" .. sid .. "]=" .. tostring(ws) ..
+                    " ↔ ws[" .. tostring(ws) .. "]=" .. tostring(workspaceScreen[ws]))
+      workspaceScreen[ws] = sid
+    end
+  end
+  for ws, sid in pairs(workspaceScreen) do
+    if screenWorkspace[sid] ~= ws then
+      hs.alert.show("⚠ ws: ws[" .. tostring(ws) .. "]=" .. sid ..
+                    " ↔ sw[" .. sid .. "]=" .. tostring(screenWorkspace[sid]))
+      screenWorkspace[sid] = ws
+    end
+  end
+  -- Ensure activeScreen points to a real, connected screen
+  local live = activeScreen and getScreenById(screenId(activeScreen))
+  if not live then
+    setActiveScreen(hs.screen.primaryScreen())
+  end
+end
+
+-- Atomically bind screen ↔ workspace, clearing any stale reverse entries first.
+-- This is the only place screenWorkspace/workspaceScreen are written.
 local function bindScreenWorkspace(screen, wsNum)
   local sid = screenId(screen)
-  screenWorkspace[sid] = wsNum
+  -- Clear old ws that this screen was showing
+  local oldWs = screenWorkspace[sid]
+  if oldWs and oldWs ~= wsNum then workspaceScreen[oldWs] = nil end
+  -- Clear old screen that was showing this workspace
+  local oldSid = workspaceScreen[wsNum]
+  if oldSid and oldSid ~= sid then screenWorkspace[oldSid] = nil end
+  -- Commit both directions atomically
+  screenWorkspace[sid]  = wsNum
   workspaceScreen[wsNum] = sid
 end
 
 local function unbindWorkspace(wsNum)
   local sid = workspaceScreen[wsNum]
   if sid then
-    screenWorkspace[sid] = nil
+    screenWorkspace[sid]   = nil
     workspaceScreen[wsNum] = nil
   end
 end
 
--- Lazily assign an unassigned window to the workspace currently showing on its screen.
--- This ensures windows opened without explicit assignment are tracked correctly.
--- Skips windows already parked offscreen — macOS reports those as being on the
--- primary screen, which would cause them to be mis-assigned to workspace 1.
+-- Lazily assign an untracked window to the workspace shown on its screen.
+-- Skips windows parked offscreen (macOS reports them as primary, causing mis-assignment).
 local function autoAssignWindow(win)
   local id = tostring(win:id())
   if workspaces[id] ~= nil then return end
@@ -110,26 +137,25 @@ local function autoAssignWindow(win)
   local s = win:screen()
   if not s then return end
   local ws = screenWorkspace[screenId(s)]
-  if ws then
-    workspaces[id] = ws
-  end
+  if ws then workspaces[id] = ws end
 end
 
--- Move all windows of wsNum offscreen
+-- ---------------------------------------------------------------------------
+-- Window placement
+-- ---------------------------------------------------------------------------
+
 local function hideWorkspace(wsNum)
   for _, win in ipairs(hs.window.allWindows()) do
     autoAssignWindow(win)
     local id = tostring(win:id())
     if workspaces[id] == wsNum then
       local f = win:frame()
-      f.x = OFFSCREEN_X
-      f.y = OFFSCREEN_Y
+      f.x = OFFSCREEN_X; f.y = OFFSCREEN_Y
       win:setFrame(f)
     end
   end
 end
 
--- Place all windows of wsNum filling the given screen
 local function showWorkspaceOnScreen(wsNum, screen)
   local max = screen:frame()
   for _, win in ipairs(hs.window.allWindows()) do
@@ -137,46 +163,44 @@ local function showWorkspaceOnScreen(wsNum, screen)
     local id = tostring(win:id())
     if workspaces[id] == wsNum then
       local f = win:frame()
-      f.x = max.x
-      f.y = max.y
-      f.w = max.w
-      f.h = max.h
+      f.x = max.x; f.y = max.y; f.w = max.w; f.h = max.h
       win:setFrame(f)
     end
   end
 end
 
--- Focus the last known window for wsNum, or any window of wsNum.
--- We trust the workspace assignment rather than win:screen() because macOS
--- doesn't update win:screen() synchronously after setFrame — checking it
--- here would cause the fallback to miss the window and never call focus(),
--- leaving the previous window raised on top of the newly placed one.
--- If the workspace has no windows, warp the mouse to that screen so macOS
--- keeps it as the active screen — preventing focusedScreen() from drifting.
+-- Focus the best window for wsNum.
+-- setActiveScreen(screen) is called first — this is the single place that
+-- commits the new active screen, covering both the window-focus and mouse-warp paths.
+-- We do not check win:screen() because macOS doesn't update it synchronously
+-- after setFrame; we trust the workspace assignment instead.
 local function focusWorkspaceOnScreen(wsNum, screen)
+  setActiveScreen(screen)
   local fw = lastFocused[wsNum]
   if fw and fw:isVisible() and workspaces[tostring(fw:id())] == wsNum then
-    fw:focus()
-    return
+    fw:focus(); return
   end
   for _, win in ipairs(hs.window.allWindows()) do
     local id = tostring(win:id())
     if workspaces[id] == wsNum and win:isVisible() then
-      win:focus()
-      return
+      win:focus(); return
     end
   end
-  -- No windows: warp mouse so macOS treats this screen as active.
+  -- Empty workspace: warp mouse so the OS treats this screen as active.
+  -- activeScreen is already updated above so our state is correct even
+  -- though no window focus event will fire.
   local f = screen:frame()
   hs.mouse.absolutePosition({ x = f.x + f.w / 2, y = f.y + f.h / 2 })
 end
 
--- Assign sequential workspaces to all screens. Called on load and screen change.
--- Primary screen keeps currentWorkspace; others get the next free workspaces.
+-- ---------------------------------------------------------------------------
+-- Bootstrap: assign sequential workspaces to all screens on load.
+-- Primary screen gets currentWorkspace; others get the next free slots.
+-- ---------------------------------------------------------------------------
+
 local function bootstrapScreens()
   screenWorkspace = {}
   workspaceScreen = {}
-  lastPivotScreen = nil
   local primary = hs.screen.primaryScreen()
   bindScreenWorkspace(primary, currentWorkspace)
   local wsIdx = 1
@@ -192,57 +216,57 @@ local function bootstrapScreens()
       end
     end
   end
+  setActiveScreen(primary)
 end
 
 -- ---------------------------------------------------------------------------
--- Core switcher
+-- Core switcher (state machine transition)
 --
--- Invariant: workspace n goes to the focused screen.
--- If n is already visible on another screen, swap that screen with the focused screen.
--- If n is hidden, evict the focused screen's current workspace and show n there.
--- Focus stays on the pivot (focused) screen after the switch.
+-- Pre:  activeScreen is the screen the user is on; maps are consistent.
+-- Post: workspace n is on activeScreen; activeScreen and focus are unchanged;
+--       maps remain consistent.
+--
+-- Cases:
+--   pivWs == n          → already there, just focus
+--   n visible elsewhere → swap: n→pivot, pivWs→target
+--   n hidden            → evict pivWs, show n on pivot
 -- ---------------------------------------------------------------------------
 
 local function showWorkspace(n)
   if n == 0 then return end
+  verifyState()
 
-  local pivot   = focusedScreen()
-  local pivSid  = screenId(pivot)
-  local pivWs   = screenWorkspace[pivSid] -- workspace currently on pivot (may be nil)
+  local pivot  = activeScreen
+  local pivSid = screenId(pivot)
+  local pivWs  = screenWorkspace[pivSid]
 
-  -- Save the focused window under the workspace that is actually on the pivot screen.
-  -- Using currentWorkspace here would be wrong when the focused screen was assigned
-  -- its workspace by bootstrap rather than by a prior showWorkspace call.
+  -- Record the focused window for the workspace currently on the pivot screen.
   lastFocused[pivWs or currentWorkspace] = hs.window.focusedWindow()
 
-  -- Already showing on the focused screen — just ensure focus and update state.
+  -- Already showing n on the active screen.
   if pivWs == n then
     currentWorkspace = n
-    lastPivotScreen  = pivot
     focusWorkspaceOnScreen(n, pivot)
     return
   end
 
-  local targetSid = workspaceScreen[n] -- screen currently showing ws n (nil if hidden)
+  local targetSid = workspaceScreen[n]
 
   if targetSid and targetSid ~= pivSid then
-    -- ws n is visible on a different screen: swap the two workspaces.
+    -- n is visible on another screen: swap.
+    -- bindScreenWorkspace is atomic — it clears stale reverse entries, so two
+    -- calls in sequence leave the maps fully consistent with no extra cleanup.
     local targetScreen = getScreenById(targetSid)
     if targetScreen then
-      -- Bind pivot to n first (overwrites workspaceScreen[n] = pivSid)
       bindScreenWorkspace(pivot, n)
       if pivWs then
-        -- Send pivWs to the target screen
         bindScreenWorkspace(targetScreen, pivWs)
         showWorkspaceOnScreen(pivWs, targetScreen)
-      else
-        -- Pivot had no workspace: clear the stale screenWorkspace entry on target
-        screenWorkspace[targetSid] = nil
       end
       showWorkspaceOnScreen(n, pivot)
     end
   else
-    -- ws n is hidden (or somehow already on pivot): evict and show
+    -- n is hidden: evict pivot's current workspace, place n there.
     if pivWs and pivWs ~= n then
       hideWorkspace(pivWs)
       unbindWorkspace(pivWs)
@@ -252,9 +276,7 @@ local function showWorkspace(n)
   end
 
   currentWorkspace = n
-  lastPivotScreen  = pivot
   hs.alert.show("Workspace " .. n)
-
   focusWorkspaceOnScreen(n, pivot)
 end
 
@@ -265,19 +287,15 @@ end
 local function assignWindowToWorkspace(n)
   local win = hs.window.focusedWindow()
   if not win then return end
-  local id = tostring(win:id())
-  workspaces[id] = n
-  hs.alert.show("Window assigned to Workspace " .. n)
+  workspaces[tostring(win:id())] = n
+  hs.alert.show("Window → Workspace " .. n)
   saveWorkspaceData(workspaces)
 end
 
 -- ---------------------------------------------------------------------------
--- Screen change: reconcile existing bindings rather than full reset.
---
--- Preserves screen->workspace assignments for screens still connected.
--- Hides (parks offscreen) workspaces whose screen disappeared.
--- Assigns a free workspace to any newly appeared screen.
--- Ensures currentWorkspace always has a screen.
+-- Screen change: reconcile without full reset.
+-- Preserves live screen↔workspace bindings, hides disappeared ones,
+-- assigns free slots to new screens, re-places all windows.
 -- ---------------------------------------------------------------------------
 
 local function reconcileScreens()
@@ -287,50 +305,57 @@ local function reconcileScreens()
     presentSids[screenId(s)] = s
   end
 
-  -- Collect workspaces whose screen has gone away (snapshot before mutating)
+  -- Hide workspaces whose screen disappeared (snapshot before mutating).
   local toHide = {}
   for wsNum, sid in pairs(workspaceScreen) do
-    if not presentSids[sid] then
-      table.insert(toHide, wsNum)
-    end
+    if not presentSids[sid] then table.insert(toHide, wsNum) end
   end
   for _, wsNum in ipairs(toHide) do
     hideWorkspace(wsNum)
     unbindWorkspace(wsNum)
   end
 
-  -- Assign a free workspace to each screen that currently has none
+  -- Assign free workspaces to newly appeared screens.
   for sid, screen in pairs(presentSids) do
     if not screenWorkspace[sid] then
       for wsIdx = 1, maxWorkspaces do
         if workspaceScreen[wsIdx] == nil then
-          bindScreenWorkspace(screen, wsIdx)
-          break
+          bindScreenWorkspace(screen, wsIdx); break
         end
       end
     end
   end
 
-  -- Ensure currentWorkspace is still on a screen; reclaim primary if not
+  -- Ensure currentWorkspace has a screen; reclaim primary if not.
   if not workspaceScreen[currentWorkspace] then
     local primary = hs.screen.primaryScreen()
-    local primSid = screenId(primary)
-    local oldWs   = screenWorkspace[primSid]
-    if oldWs then
-      hideWorkspace(oldWs)
-      unbindWorkspace(oldWs)
-    end
+    local oldWs   = screenWorkspace[screenId(primary)]
+    if oldWs then hideWorkspace(oldWs); unbindWorkspace(oldWs) end
     bindScreenWorkspace(primary, currentWorkspace)
   end
 
-  lastPivotScreen = nil
-
-  -- Re-place windows on all screens
+  -- Re-place all visible workspaces on their screens.
   for _, screen in ipairs(allScreens --[[@as table]]) do
     local ws = screenWorkspace[screenId(screen)]
     if ws then showWorkspaceOnScreen(ws, screen) end
   end
+
+  verifyState()
 end
+
+-- ---------------------------------------------------------------------------
+-- Focus watcher
+--
+-- Keeps activeScreen in sync on every window focus change.
+-- hs.window.filter.windowFocused fires for any window, including windows of
+-- the same app on a different screen — hs.application.watcher.activated would
+-- miss those (it only fires when the active *app* changes).
+-- ---------------------------------------------------------------------------
+
+hs.window.filter.new()
+  :subscribe(hs.window.filter.windowFocused, function(win)
+    if win then setActiveScreen(win:screen()) end
+  end)
 
 hs.screen.watcher.new(function()
   reconcileScreens()
@@ -353,9 +378,9 @@ hs.hotkey.bind({ "alt", "shift" }, tostring(0), function()
   assignWindowToWorkspace(0)
 end)
 
--- Window movement between physical screens
--- Reassign the window to the workspace of its destination screen so the
--- workspace state stays consistent with where the window actually landed.
+-- Window movement between physical screens.
+-- Reassigns the window to the workspace of its destination screen and
+-- updates activeScreen so the next workspace switch targets the right screen.
 local function moveWindowToScreen(win, destScreen, moveFn)
   if not win then return end
   moveFn(win)
@@ -609,10 +634,10 @@ end)
 hs.timer.doAfter(0.5, function()
   bootstrapScreens()
   for _, screen in ipairs(hs.screen.allScreens() --[[@as table]]) do
-    local sid = screenId(screen)
-    local ws  = screenWorkspace[sid]
+    local ws = screenWorkspace[screenId(screen)]
     if ws then showWorkspaceOnScreen(ws, screen) end
   end
+  verifyState()
 end)
 
 hs.application.enableSpotlightForNameSearches(true)
