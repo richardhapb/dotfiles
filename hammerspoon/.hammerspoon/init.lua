@@ -50,6 +50,7 @@ end
 local screenWorkspace  = {}
 local workspaceScreen  = {}
 local lastFocused      = {}  -- wsNum -> last focused hs.window
+local savedFrames      = {}  -- windowId -> {x,y,w,h} saved on hide, restored on show
 local activeScreen     = nil -- always current; set by watcher + explicit calls
 local currentWorkspace = 1
 
@@ -130,6 +131,7 @@ end
 -- Lazily assign an untracked window to the workspace shown on its screen.
 -- Skips windows parked offscreen (macOS reports them as primary, causing mis-assignment).
 local function autoAssignWindow(win)
+  if not win:isStandard() then return end  -- skip menus, tooltips, popovers
   local id = tostring(win:id())
   if workspaces[id] ~= nil then return end
   local f = win:frame()
@@ -150,22 +152,91 @@ local function hideWorkspace(wsNum)
     local id = tostring(win:id())
     if workspaces[id] == wsNum then
       local f = win:frame()
-      f.x = OFFSCREEN_X; f.y = OFFSCREEN_Y
-      win:setFrame(f)
+      if f.x < OFFSCREEN_X and f.y < OFFSCREEN_Y then
+        savedFrames[id] = { x = f.x, y = f.y, w = f.w, h = f.h }
+      end
+      win:setFrame({ x = OFFSCREEN_X, y = OFFSCREEN_Y, w = f.w, h = f.h })
     end
   end
 end
 
-local function showWorkspaceOnScreen(wsNum, screen)
+-- Tiles all windows belonging to wsNum that are currently on-screen.
+-- Also updates savedFrames so hide/show preserves the tiled layout.
+local function tileWorkspaceOnScreen(wsNum, screen)
   local max = screen:frame()
+  local wins = {}
+  for _, win in ipairs(hs.window.allWindows()) do
+    local id = tostring(win:id())
+    -- Include all standard windows assigned to this workspace
+    if workspaces[id] == wsNum and win:isStandard() then
+      table.insert(wins, win)
+    end
+  end
+  local n = #wins
+  if n == 0 then return end
+
+  local frames = {}
+  if n == 1 then
+    frames[1] = { x = max.x, y = max.y, w = max.w, h = max.h }
+  elseif n == 2 then
+    local w = math.floor(max.w / 2)
+    frames[1] = { x = max.x,     y = max.y, w = w,         h = max.h }
+    frames[2] = { x = max.x + w, y = max.y, w = max.w - w, h = max.h }
+  else
+    local mainW = math.floor(max.w * 0.6)
+    local sideW = max.w - mainW
+    local sideH = math.floor(max.h / (n - 1))
+    frames[1] = { x = max.x, y = max.y, w = mainW, h = max.h }
+    for i = 2, n do
+      local y = max.y + (i - 2) * sideH
+      local h = (i == n) and (max.h - (i - 2) * sideH) or sideH
+      frames[i] = { x = max.x + mainW, y = y, w = sideW, h = h }
+    end
+  end
+
+  for i, win in ipairs(wins) do
+    win:setFrame(frames[i])
+    savedFrames[tostring(win:id())] = frames[i]
+  end
+end
+
+-- Returns true if frame center is within screen bounds.
+local function frameOnScreen(f, screen)
+  local sf = screen:frame()
+  local cx = f.x + f.w / 2
+  local cy = f.y + f.h / 2
+  return cx >= sf.x and cx < sf.x + sf.w and cy >= sf.y and cy < sf.y + sf.h
+end
+
+local function showWorkspaceOnScreen(wsNum, screen)
+  local max    = screen:frame()
+  local needsTile = false
+
   for _, win in ipairs(hs.window.allWindows()) do
     autoAssignWindow(win)
     local id = tostring(win:id())
     if workspaces[id] == wsNum then
-      local f = win:frame()
-      f.x = max.x; f.y = max.y; f.w = max.w; f.h = max.h
-      win:setFrame(f)
+      local f   = win:frame()
+      local parked   = f.x >= OFFSCREEN_X or f.y >= OFFSCREEN_Y
+      local wrongScr = not parked and not frameOnScreen(f, screen)
+
+      if parked or wrongScr then
+        local saved = savedFrames[id]
+        if saved and frameOnScreen(saved, screen) then
+          -- Saved position is on this screen — restore it
+          win:setFrame(saved)
+        else
+          -- No saved frame or saved frame is for a different screen — tile
+          win:setFrame({ x = max.x, y = max.y, w = max.w, h = max.h })
+          needsTile = true
+        end
+      end
     end
+  end
+
+  -- Defer tiling so macOS processes the setFrame calls above first
+  if needsTile then
+    hs.timer.doAfter(0, function() tileWorkspaceOnScreen(wsNum, screen) end)
   end
 end
 
@@ -287,9 +358,16 @@ end
 local function assignWindowToWorkspace(n)
   local win = hs.window.focusedWindow()
   if not win then return end
-  workspaces[tostring(win:id())] = n
+  local id   = tostring(win:id())
+  local oldWs = workspaces[id]
+  workspaces[id] = n
   hs.alert.show("Window → Workspace " .. n)
   saveWorkspaceData(workspaces)
+  -- Re-tile the source workspace now that this window has left it
+  if oldWs and oldWs ~= n and workspaceScreen[oldWs] then
+    local screen = getScreenById(workspaceScreen[oldWs])
+    if screen then tileWorkspaceOnScreen(oldWs, screen) end
+  end
 end
 
 -- ---------------------------------------------------------------------------
@@ -354,7 +432,94 @@ end
 
 hs.window.filter.new()
   :subscribe(hs.window.filter.windowFocused, function(win)
-    if win then setActiveScreen(win:screen()) end
+    if win then
+      setActiveScreen(win:screen())
+      local wsNum = workspaces[tostring(win:id())]
+      if wsNum then lastFocused[wsNum] = win end
+    end
+  end)
+
+-- Focus-follows-mouse via eventtap (requires Input Monitoring permission).
+-- Debounces 50ms after the last mouse movement, then focuses the topmost
+-- standard on-screen window under the cursor.
+local ffmLastWinId = nil
+local ffmDebounce  = nil
+local ffmEventtap  = nil
+
+local function ffmFocus()
+  local pos = hs.mouse.absolutePosition()
+  if pos.x >= OFFSCREEN_X or pos.y >= OFFSCREEN_Y then return end
+  for _, win in ipairs(hs.window.orderedWindows()) do
+    if win:isStandard() and not win:isMinimized() then
+      local f = win:frame()
+      if f.x < OFFSCREEN_X and f.y < OFFSCREEN_Y and
+         pos.x >= f.x and pos.x < f.x + f.w and
+         pos.y >= f.y and pos.y < f.y + f.h then
+        local wid = tostring(win:id())
+        if wid ~= ffmLastWinId then
+          ffmLastWinId = wid
+          win:focus()
+          local s = win:screen()
+          if s and s ~= activeScreen then setActiveScreen(s) end
+        end
+        return
+      end
+    end
+  end
+end
+
+ffmEventtap = hs.eventtap.new({ hs.eventtap.event.types.mouseMoved }, function()
+  if ffmDebounce then ffmDebounce:stop() end
+  ffmDebounce = hs.timer.doAfter(0.05, function()
+    local ok, err = pcall(ffmFocus)
+    if not ok then hs.alert.show("FFM error: " .. tostring(err)) end
+  end)
+  return false
+end)
+ffmEventtap:start()
+
+-- Watchdog: macOS can silently disable eventtaps on sleep/wake.
+local ffmWatchdog = hs.timer.new(5, function()
+  if not ffmEventtap:isEnabled() then ffmEventtap:start() end
+end)
+ffmWatchdog:start()
+
+hs.window.filter.new()
+  :subscribe(hs.window.filter.windowCreated, function(win)
+    if not win or not win:isStandard() or not win:isVisible() then return end
+    local pos = win:topLeft()
+    if pos.x >= OFFSCREEN_X or pos.y >= OFFSCREEN_Y then return end
+    autoAssignWindow(win)
+    local wsNum = workspaces[tostring(win:id())]
+    if wsNum and workspaceScreen[wsNum] then
+      local screen = getScreenById(workspaceScreen[wsNum])
+      if screen then
+        hs.timer.doAfter(0, function() tileWorkspaceOnScreen(wsNum, screen) end)
+      end
+    end
+  end)
+
+hs.window.filter.new()
+  :subscribe(hs.window.filter.windowDestroyed, function(win)
+    if not win then return end
+    local wid = tostring(win:id())
+    local wsNum = workspaces[wid]
+    savedFrames[wid] = nil
+    if wsNum then
+      workspaces[wid] = nil
+      saveWorkspaceData(workspaces)
+      if workspaceScreen[wsNum] then
+        local screen = getScreenById(workspaceScreen[wsNum])
+        if screen then
+          hs.timer.doAfter(0, function() tileWorkspaceOnScreen(wsNum, screen) end)
+        end
+      end
+    end
+    for ws, lastWin in pairs(lastFocused) do
+      if lastWin and lastWin:id() == win:id() then
+        lastFocused[ws] = nil; break
+      end
+    end
   end)
 
 hs.screen.watcher.new(function()
@@ -383,16 +548,22 @@ end)
 -- screen, leaving all other windows and workspace bindings untouched.
 local function moveWindowToScreen(win, destScreen, moveFn)
   if not win then return end
+  local id    = tostring(win:id())
+  local srcWs = workspaces[id]
   moveFn(win)
   if not destScreen then return end
 
-  local id     = tostring(win:id())
   local destWs = screenWorkspace[screenId(destScreen)]
   if not destWs then return end
 
   workspaces[id] = destWs
   setActiveScreen(destScreen)
   saveWorkspaceData(workspaces)
+  -- Re-tile the source workspace now that this window has left it
+  if srcWs and srcWs ~= destWs and workspaceScreen[srcWs] then
+    local srcScreen = getScreenById(workspaceScreen[srcWs])
+    if srcScreen then tileWorkspaceOnScreen(srcWs, srcScreen) end
+  end
 end
 
 hs.hotkey.bind({ "alt" }, "h", function()
@@ -630,6 +801,32 @@ end)
 -- Neospeller
 hs.hotkey.bind({ "alt" }, "g", function()
   hs.execute("~/.local/bin/ns-clip", true)
+end)
+
+-- Quick Note: open a NEW Quick Note (alt+n)
+-- Temporarily disables "resume last Quick Note" so fn+Q opens a fresh note,
+-- then restores the original preference.
+hs.hotkey.bind({ "alt" }, "n", function()
+  local currentVal, _, _ = hs.execute("defaults read com.apple.Notes ICShouldResumeLastQuickNote 2>/dev/null")
+  currentVal = currentVal:gsub("%s+", "")
+
+  -- Disable "resume last" so Quick Note opens a new blank note
+  hs.execute("defaults write com.apple.Notes ICShouldResumeLastQuickNote -bool false")
+
+  -- Open Quick Note via fn+Q
+  hs.eventtap.keyStroke({ "fn" }, "q", 0)
+
+  -- Restore original preference after Quick Note has opened
+  hs.timer.doAfter(0.5, function()
+    if currentVal == "1" then
+      hs.execute("defaults write com.apple.Notes ICShouldResumeLastQuickNote -bool true")
+    elseif currentVal == "0" then
+      -- was already false, leave it
+    else
+      -- key didn't exist (default = resume last), restore by deleting
+      hs.execute("defaults delete com.apple.Notes ICShouldResumeLastQuickNote 2>/dev/null")
+    end
+  end)
 end)
 
 -- Bootstrap on load
