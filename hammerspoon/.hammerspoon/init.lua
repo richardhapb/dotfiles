@@ -379,33 +379,18 @@ hs.hotkey.bind({ "alt", "shift" }, tostring(0), function()
 end)
 
 -- Window movement between physical screens.
--- Reassigns the window to the workspace of its destination screen and
--- updates activeScreen so the next workspace switch targets the right screen.
+-- Reassigns only the moved window to the workspace shown on the destination
+-- screen, leaving all other windows and workspace bindings untouched.
 local function moveWindowToScreen(win, destScreen, moveFn)
   if not win then return end
   moveFn(win)
   if not destScreen then return end
 
-  local id        = tostring(win:id())
-  local srcWs     = workspaces[id]
-  if not srcWs then return end
+  local id     = tostring(win:id())
+  local destWs = screenWorkspace[screenId(destScreen)]
+  if not destWs then return end
 
-  local destSid   = screenId(destScreen)
-  local destWs    = screenWorkspace[destSid]
-  local srcSid    = workspaceScreen[srcWs]
-  local srcScreen = srcSid and getScreenById(srcSid)
-
-  -- Transfer srcWs to destScreen, swapping with destWs if present.
-  -- This keeps the window in its workspace and moves the workspace to the
-  -- destination screen, so subsequent workspace switches remain consistent.
-  bindScreenWorkspace(destScreen, srcWs)
-  showWorkspaceOnScreen(srcWs, destScreen)
-
-  if srcScreen and destWs then
-    bindScreenWorkspace(srcScreen, destWs)
-    showWorkspaceOnScreen(destWs, srcScreen)
-  end
-
+  workspaces[id] = destWs
   setActiveScreen(destScreen)
   saveWorkspaceData(workspaces)
 end
