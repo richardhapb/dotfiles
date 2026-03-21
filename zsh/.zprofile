@@ -91,7 +91,6 @@ fi
 if [[ "$NEEDS_REGEN" == true ]]; then  # Cache Homebrew prefixes to avoid slow `brew --prefix` calls
     if [[ "$OSTYPE" == "darwin"* ]]; then
         echo "export HOMEBREW_PREFIX=\"$(brew --prefix)\"" > "$CACHE_FILE"
-        echo "export JAVA_HOME=\"$(brew --prefix java)@17\"" >> "$CACHE_FILE"
         echo "export SPARK_HOME=\"$(brew --prefix apache-spark)/libexec\"" >> "$CACHE_FILE"
         echo "export LLVM_PATH=\"$(brew --prefix llvm)/bin\"" >> "$CACHE_FILE"
         echo "PATH=\"$PATH:$(brew --prefix ruby)/bin\"" >> "$CACHE_FILE"

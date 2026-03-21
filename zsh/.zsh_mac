@@ -18,7 +18,7 @@ export NOTES="$HOME/notes"
 source $(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source $(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
 
-export JAVA_HOME=$(brew --prefix java)@24 
+export JAVA_HOME=$(brew --prefix java)
 export PATH=$JAVA_HOME/bin:$PATH
 export SPARK_HOME=$(brew --prefix apache-spark)/libexec
 export PATH=$SPARK_HOME/bin:$PATH
