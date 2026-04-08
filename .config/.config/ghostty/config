@@ -3,8 +3,8 @@
 foreground = dddddd
 font-size = 13
 
-# window-decoration = false
-# macos-non-native-fullscreen=true
+window-decoration = false
+macos-non-native-fullscreen=true
 
 keybind="alt+v=toggle_visibility"
 keybind="alt+f=toggle_fullscreen"
