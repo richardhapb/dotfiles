@@ -222,7 +222,7 @@ end)
 -- Quick Note: open a NEW Quick Note (alt+n)
 -- Temporarily disables "resume last Quick Note" so fn+Q opens a fresh note,
 -- then restores the original preference.
-hs.hotkey.bind({ "alt" }, "n", function()
+hs.hotkey.bind({ "alt", "shift" }, "n", function()
   local currentVal, _, _ = hs.execute("defaults read com.apple.Notes ICShouldResumeLastQuickNote 2>/dev/null")
   currentVal = currentVal:gsub("%s+", "")
 
