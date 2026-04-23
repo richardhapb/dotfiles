@@ -2,12 +2,10 @@
 _install.sh
 todo.md
 devlog.md
-ty.toml
 docker-compose.override.yml
 tags
 notes.txt
 .nvim
-.claude
 sync.sh
 
 
