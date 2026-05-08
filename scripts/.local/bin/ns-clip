@@ -26,4 +26,9 @@ elif [[ "$OSTYPE" == "linux-gnu" ]]; then
     notify-send "Grammar reviewed! 👊" "Copied to clipboard"
 fi
 
+# Drain spool to Firestore in the background; never block the user.
+if command -v ns-flush >/dev/null 2>&1; then
+    ( ns-flush >/dev/null 2>&1 & disown ) || true
+fi
+
 

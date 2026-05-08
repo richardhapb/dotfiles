@@ -24,6 +24,8 @@ set hlsearch
 set clipboard^=unnamed,unnamedplus
 set encoding=utf-8
 
+set colorcolumn=100
+
 " Enable folding
 set foldmethod=indent
 set foldlevel=99
