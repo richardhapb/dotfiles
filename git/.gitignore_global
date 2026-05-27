@@ -5,8 +5,14 @@ devlog.md
 docker-compose.override.yml
 tags
 notes.txt
+notes.md
 .nvim
 sync.sh
+comments
+plan.txt
+plan.md
+design.txt
+design.md
 
 
 
