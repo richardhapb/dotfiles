@@ -10,7 +10,7 @@ fi
 cd $DOTFILES
 
 for dir in $(ls -d */ .*/ | sed 's/\///' | grep -Ev '^\.*$'); do
-    if [ "$dir" == ".git" ]; then
+    if [ "$dir" == ".git" -o "$dir" == ".claude" ]; then
         continue
     fi
     echo "stow $dir"
