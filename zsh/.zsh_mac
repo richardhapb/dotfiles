@@ -47,6 +47,31 @@ help() {
 }
 lman() { man -M ~/linux-man "$@" }
 
+rpi() {
+    # If tailscale exists (virtual networks as utun*), use it directly,
+    # otherwise will require password
+    if ifconfig | grep '^utun' >/dev/null 2>&1; then
+        ssh rpi
+    else
+        if command -v op >/dev/null 2>&1; then
+            pass=$(op item get RPI --reveal --fields label=password)
+            sshpass -f <(printf '%s\n' "$pass") ssh rpi
+        else
+            echo "1Password cli not found, install it first."
+        fi
+    fi
+}
+
+rpp() {
+    if command -v op >/dev/null 2>&1; then
+        pass=$(op item get RPI --reveal --fields label=password)
+        echo "$pass" | pbcopy
+        echo "Copied to clipboard"
+    else
+        echo "1Password cli not found, install it first."
+    fi
+}
+
 export SNVIM="$DEV/cont/neovim"
 export BOOKS="$HOME/Documents/Books"
 export PATH="/opt/homebrew/bin:$PATH"

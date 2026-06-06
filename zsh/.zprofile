@@ -140,6 +140,8 @@ alias gcl='git clone'
 alias gf='git fetch'
 alias gm='git merge'
 
+alias rr=gqrx  # I never remember this name  -- rr because "Radio"
+
 
 alias lr='ln -sf $(pwd)/target/release/$(dirname $(pwd)) ~/.local/bin'
 alias ld='ln -sf $(pwd)/target/debug/$(dirname $(pwd)) ~/.local/bin'
