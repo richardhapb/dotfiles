@@ -34,4 +34,6 @@
     path = ~/.gitconfig-work
 [rerere]
     enabled = true
-
+# Machine-specific config (commit signing, etc.). Optional; git ignores it if missing.
+[include]
+    path = ~/.gitconfig-local
