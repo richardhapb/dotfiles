@@ -4,9 +4,12 @@ hs.loadSpoon("EmmyLua")
 -- On a Spanish (ISO) Apple keyboard with the US layout, the key below Escape
 -- (HID 0x35) emits §/± and the key next to left Shift (HID 0x64) emits `/~.
 -- Swap them so ` is where it belongs (under Escape) and the useless §/± moves
--- next to Shift. hidutil mappings reset on reboot/replug, so reapply on load.
+-- next to Shift. Scope the swap to the built-in keyboard so external US
+-- keyboards keep their normal key positions. Clear the old global mapping
+-- first when migrating from the previous config.
 hs.execute(
-  [[hidutil property --set '{"UserKeyMapping":[]] ..
+  [[hidutil property --set '{"UserKeyMapping":[]}' && ]] ..
+  [[hidutil property --matching '{"Transport":"FIFO","PrimaryUsagePage":1,"PrimaryUsage":6}' --set '{"UserKeyMapping":[]] ..
   [[{"HIDKeyboardModifierMappingSrc":0x700000035,"HIDKeyboardModifierMappingDst":0x700000064},]] ..
   [[{"HIDKeyboardModifierMappingSrc":0x700000064,"HIDKeyboardModifierMappingDst":0x700000035}]] ..
   [[]}']]
