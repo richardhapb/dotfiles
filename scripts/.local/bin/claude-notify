@@ -19,6 +19,21 @@ label="${1:-Claude Code}"
 sound="${2:-Glass}"
 payload="$(cat 2>/dev/null || true)"
 
+# Stay silent when the session is already in front of you: Ghostty is the
+# frontmost macOS app AND (in tmux) this pane's window is the active window of
+# an attached session. lsappinfo is permission-free (unlike System Events).
+is_session_focused() {
+  local front
+  front="$(lsappinfo front 2>/dev/null)" || return 1
+  lsappinfo info -only name "$front" 2>/dev/null | grep -qi ghostty || return 1
+  if [[ -n "${TMUX:-}" ]]; then
+    [[ "$(tmux display-message -p -t "${TMUX_PANE:-}" '#{window_active}' 2>/dev/null)" == "1" ]] || return 1
+    [[ "$(tmux display-message -p -t "${TMUX_PANE:-}" '#{session_attached}' 2>/dev/null)" -ge 1 ]] 2>/dev/null || return 1
+  fi
+  return 0
+}
+is_session_focused && exit 0
+
 # Notification events carry a human-readable .message; Stop does not.
 body="$(printf '%s' "$payload" | jq -r '.message // empty' 2>/dev/null || true)"
 [[ -n "$body" ]] || body="Ready for input"
