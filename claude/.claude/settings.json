@@ -7,28 +7,37 @@
       "Bash(git push:*)"
     ]
   },
-  "model": "opus",
-  "enabledPlugins": {
-    "pyright-lsp@claude-plugins-official": true,
-    "typescript-lsp@claude-plugins-official": true,
-    "rust-analyzer-lsp@claude-plugins-official": true,
-    "clangd-lsp@claude-plugins-official": true,
-    "lua-lsp@claude-plugins-official": true,
-    "ruby-lsp@claude-plugins-official": true,
-    "gopls-lsp@claude-plugins-official": true
-  },
-  "effortLevel": "medium",
-  "theme": "dark-daltonized",
-  "editorMode": "vim",
-  "statusLine": {
-    "type": "command",
-    "command": "~/.local/bin/statusline-dense.sh"
-  },
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.tmux/plugins/tmux-claude-session-manager/scripts/state.sh working"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "permission_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.tmux/plugins/tmux-claude-session-manager/scripts/state.sh waiting"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
-        "matcher": "Bash",
+        "matcher": "AskUserQuestion",
         "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.tmux/plugins/tmux-claude-session-manager/scripts/state.sh waiting"
+          },
           {
             "type": "command",
             "command": "jq -r \".tool_input.command\" | grep -qE \"git[[:space:]]+push([[:space:]]|$).*(--force|--force-with-lease|(^|[[:space:]])-f([[:space:]]|$))\" && printf '%s' \"{\\\"hookSpecificOutput\\\":{\\\"hookEventName\\\":\\\"PreToolUse\\\",\\\"permissionDecision\\\":\\\"deny\\\",\\\"permissionDecisionReason\\\":\\\"Force-push is reserved for Richard. Finish all prep (commit, rebase, fetch, verify the lease), then STOP and ask him to run the force-push himself; do not run it.\\\"}}\" || true",
@@ -36,6 +45,34 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.tmux/plugins/tmux-claude-session-manager/scripts/state.sh idle"
+          }
+        ]
+      }
     ]
-  }
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "~/.local/bin/statusline-dense.sh"
+  },
+  "enabledPlugins": {
+    "pyright-lsp@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true,
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "clangd-lsp@claude-plugins-official": true,
+    "lua-lsp@claude-plugins-official": true,
+    "ruby-lsp@claude-plugins-official": true,
+    "gopls-lsp@claude-plugins-official": true,
+    "frontend-design@claude-plugins-official": true
+  },
+  "effortLevel": "medium",
+  "theme": "dark-daltonized",
+  "editorMode": "vim"
 }

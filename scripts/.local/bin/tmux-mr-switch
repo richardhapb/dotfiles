@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# tmux-mr-switch — fzf picker over open MR review sessions (created by tmux-mr).
+#
+#   enter   switch to the session
+#   ctrl-x  close the session and remove its git worktree
+#
+# NOTE: switching uses switch-client, never swap-window (macOS tmux 3.7 bug).
+
+# macOS /bin/bash is 3.2 — no `set -u`, no mapfile.
+set -eo pipefail
+
+WORKTREE_ROOT="${DEV:-$HOME}/.mr-worktrees"
+
+sessions=()
+while IFS= read -r s; do
+  [[ -n "$s" ]] && sessions+=("$s")
+done < <(tmux list-sessions -F '#{session_name}' 2>/dev/null | grep '^mr-' || true)
+[[ ${#sessions[@]} -gt 0 ]] || { printf 'no MR sessions open\n' >&2; exit 0; }
+
+# Show "!<iid>  <repo>" (iid is the trailing -N of the session name); the real
+# session name rides along as a hidden trailing field for switching/cleanup.
+out="$(
+  for s in "${sessions[@]}"; do
+    iid="${s##*-}"; rest="${s%-*}"; repo="${rest#mr-}"
+    printf '!%s  %s\t%s\n' "$iid" "$repo" "$s"
+  done \
+    | fzf --delimiter='\t' --with-nth=1 --prompt='MR session > ' \
+          --header='enter: switch    ctrl-x: close + remove worktree' \
+          --expect=ctrl-x --no-multi
+)" || exit 0
+
+key="$(head -1 <<<"$out")"
+line="$(sed -n 2p <<<"$out")"
+session="${line##*$'\t'}"
+[[ -n "$session" ]] || exit 0
+
+if [[ "$key" == "ctrl-x" ]]; then
+  # Recover the worktree from the session name (see tmux-mr's slug), then the
+  # main repo root from the worktree's common git dir, and detach it cleanly.
+  wt="$WORKTREE_ROOT/${session#mr-}"
+  if [[ -d "$wt" ]]; then
+    gitdir="$(git -C "$wt" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
+    repo_root="${gitdir%/.git}"
+    if [[ -n "$gitdir" && -d "$repo_root" ]]; then
+      git -C "$repo_root" worktree remove --force "$wt" 2>/dev/null \
+        || { rm -rf "$wt"; git -C "$repo_root" worktree prune; }
+    else
+      rm -rf "$wt"
+    fi
+  fi
+  tmux kill-session -t "=$session"
+  exit 0
+fi
+
+if [[ -n "${TMUX:-}" ]]; then
+  tmux switch-client -t "=$session"
+else
+  tmux attach-session -t "=$session"
+fi

@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+# tmux-mr — open a GitLab MR for review in its own tmux session.
+#
+# Each MR is checked out into an isolated git worktree (detached at the MR
+# head ref) so several reviews can run at once without touching the main
+# checkout. The session opens nvim on the MR diff vs the target branch.
+#
+# Usage:
+#   tmux-mr            # fzf-pick from MRs I review / am assigned (cwd repo)
+#   tmux-mr <iid>      # open MR by number in the cwd repo
+#   tmux-mr <url>      # open MR by GitLab URL (repo derived from the URL)
+#
+# Switch between / clean up MR sessions with `tmux-mr-switch`.
+# NOTE: deliberately avoids `swap-window` (broken on macOS until tmux 3.7).
+
+# NB: macOS /bin/bash is 3.2 — no `set -u` (empty-array expansion aborts under
+# it), no mapfile, no associative arrays.
+set -eo pipefail
+
+# Pause on error: this runs as a throwaway tmux window (like tmux-sessionizer),
+# which closes the instant the script exits — so hold it open to show the error.
+die() {
+  printf 'tmux-mr: %s\n' "$*" >&2
+  [[ -t 0 ]] && { printf 'press any key…' >&2; read -rsn1 _ || true; }
+  exit 1
+}
+
+command -v glab >/dev/null || die "glab not found"
+command -v jq   >/dev/null || die "jq not found"
+
+WORKTREE_ROOT="${DEV:-$HOME}/.mr-worktrees"
+
+# --- resolve repo + MR iid -------------------------------------------------
+arg="${1:-}"
+if [[ "$arg" == "--clip" || "$arg" == "-c" ]]; then
+  # prefix o: take the MR from the clipboard (URL, "MR <url>", or a number).
+  arg="$(pbpaste 2>/dev/null | head -1 | sed -E 's/^[[:space:]]*([Mm][Rr][[:space:]]+)?//; s/[[:space:]]+$//')"
+  [[ -n "$arg" ]] || die "clipboard is empty"
+fi
+repo_flag=()   # -R owner/path when derived from a URL
+
+if [[ "$arg" =~ ^https?:// ]]; then
+  # https://host/group/sub/project/-/merge_requests/123
+  iid="${arg##*/merge_requests/}"; iid="${iid%%/*}"; iid="${iid%%\?*}"
+  proj="${arg#*://*/}"; proj="${proj%%/-/*}"
+  [[ -n "$iid" && -n "$proj" ]] || die "could not parse MR url: $arg"
+  repo_flag=(-R "$proj")
+  repo_root="" repo_name="${proj##*/}"
+else
+  repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" \
+    || die "not inside a git repo (cd into the repo, or pass an MR url)"
+  repo_name="$(basename "$repo_root")"
+  iid="$arg"; iid="${iid#!}"; iid="${iid#\#}"
+fi
+
+# --- pick an MR if no iid was given ---------------------------------------
+if [[ -z "$iid" ]]; then
+  list="$(
+    {
+      glab mr list "${repo_flag[@]}" --reviewer=@me -F json -P 50 2>/dev/null
+      glab mr list "${repo_flag[@]}" --assignee=@me -F json -P 50 2>/dev/null
+    } | jq -s 'add | unique_by(.iid)'
+  )"
+  [[ "$(jq 'length' <<<"$list")" -gt 0 ]] || \
+    list="$(glab mr list "${repo_flag[@]}" -F json -P 50 2>/dev/null)"
+  [[ "$(jq 'length' <<<"$list")" -gt 0 ]] || die "no open MRs found"
+
+  # Visible column shows the MR number; the iid is repeated as a hidden
+  # trailing field for parsing (fzf returns the whole line regardless).
+  line="$(
+    jq -r '.[] | "!\(.iid)  \(.title)  (\(.source_branch) → \(.target_branch))  @\(.author.username)\t\(.iid)"' <<<"$list" \
+      | fzf --with-nth=1 --delimiter='\t' --prompt='MR > ' \
+            --header='enter: open review' --no-multi
+  )" || exit 0
+  [[ -n "$line" ]] || exit 0
+  iid="${line##*$'\t'}"
+fi
+
+# --- fetch MR metadata -----------------------------------------------------
+mr="$(glab mr view "$iid" "${repo_flag[@]}" -F json)" || die "cannot view MR !$iid"
+target="$(jq -r '.target_branch' <<<"$mr")"
+[[ -n "$target" && "$target" != null ]] || die "no target branch for MR !$iid"
+
+# A URL-derived repo has no local worktree to attach to; require a local repo.
+[[ -n "$repo_root" ]] || die "MR !$iid is in '$repo_name'; cd into a local clone of that repo and run: tmux-mr $iid"
+
+# --- create / reuse the worktree ------------------------------------------
+# slug ties the worktree dir and the session name together so tmux-mr-switch
+# can recover the worktree path from the session name alone (no fragile
+# session-option storage, survives a tmux restart).
+slug="$(printf '%s' "${repo_name}-${iid}" | tr . _)"
+wt="$WORKTREE_ROOT/$slug"
+git -C "$repo_root" fetch -q origin "refs/merge-requests/${iid}/head" "$target"
+if [[ ! -d "$wt" ]]; then
+  git -C "$repo_root" worktree add -f --detach "$wt" FETCH_HEAD
+fi
+
+# --- session --------------------------------------------------------------
+session="mr-$slug"
+if ! tmux has-session -t "=$session" 2>/dev/null; then
+  tmux new-session -ds "$session" -c "$wt"
+  tmux rename-window -t "=$session:1" diff
+  tmux send-keys -t "=$session:1" \
+    "nvim -c 'DiffviewOpen origin/${target}...HEAD'" Enter
+fi
+
+if [[ -n "${TMUX:-}" ]]; then
+  tmux switch-client -t "=$session"
+else
+  tmux attach-session -t "=$session"
+fi
