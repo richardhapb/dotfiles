@@ -28,6 +28,16 @@
             "command": "$HOME/.tmux/plugins/tmux-claude-session-manager/scripts/state.sh waiting"
           }
         ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.local/bin/claude-notify 'Claude needs input' Submarine",
+            "async": true
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -53,6 +63,11 @@
           {
             "type": "command",
             "command": "$HOME/.tmux/plugins/tmux-claude-session-manager/scripts/state.sh idle"
+          },
+          {
+            "type": "command",
+            "command": "$HOME/.local/bin/claude-notify 'Claude finished' Glass",
+            "async": true
           }
         ]
       }

@@ -30,6 +30,33 @@ command -v jq   >/dev/null || die "jq not found"
 
 WORKTREE_ROOT="${DEV:-$HOME}/.mr-worktrees"
 
+# Locate a local clone whose origin matches the GitLab project path
+# (e.g. "checkr/system/app/region-compliance"), scanning the usual repo roots.
+# Prints the repo toplevel on success.
+find_clone() {
+  local projlc base d url p
+  projlc="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+  for base in "${DEV:-}" "$HOME/proj" "$HOME/dev" "${DEV:-}/cont"; do
+    [[ -d "$base" ]] || continue
+    for d in "$base"/*/; do
+      [[ -e "$d/.git" ]] || continue
+      url="$(git -C "$d" remote get-url origin 2>/dev/null)" || continue
+      # Normalize origin to its project path: drop .git, then the scheme+host
+      # (https://host/PATH) or user@host: (git@host:PATH). Compare EXACTLY so
+      # "region-compliance" never matches "region-compliance-frontend".
+      p="${url%.git}"
+      case "$p" in
+        *://*) p="${p#*://}"; p="${p#*/}" ;;
+        *:*)   p="${p#*:}" ;;
+      esac
+      [[ "$(printf '%s' "$p" | tr '[:upper:]' '[:lower:]')" == "$projlc" ]] || continue
+      printf '%s' "${d%/}"
+      return 0
+    done
+  done
+  return 1
+}
+
 # --- resolve repo + MR iid -------------------------------------------------
 arg="${1:-}"
 if [[ "$arg" == "--clip" || "$arg" == "-c" ]]; then
@@ -37,15 +64,17 @@ if [[ "$arg" == "--clip" || "$arg" == "-c" ]]; then
   arg="$(pbpaste 2>/dev/null | head -1 | sed -E 's/^[[:space:]]*([Mm][Rr][[:space:]]+)?//; s/[[:space:]]+$//')"
   [[ -n "$arg" ]] || die "clipboard is empty"
 fi
-repo_flag=()   # -R owner/path when derived from a URL
-
 if [[ "$arg" =~ ^https?:// ]]; then
   # https://host/group/sub/project/-/merge_requests/123
   iid="${arg##*/merge_requests/}"; iid="${iid%%/*}"; iid="${iid%%\?*}"
   proj="${arg#*://*/}"; proj="${proj%%/-/*}"
   [[ -n "$iid" && -n "$proj" ]] || die "could not parse MR url: $arg"
-  repo_flag=(-R "$proj")
-  repo_root="" repo_name="${proj##*/}"
+  repo_name="${proj##*/}"
+  # Resolve the matching local clone so every glab/git call runs inside it.
+  # (A bare `glab -R <path>` would query gitlab.com, not the self-hosted host;
+  # running from the clone lets glab read host + project from its origin.)
+  repo_root="$(find_clone "$proj" || true)"
+  [[ -n "$repo_root" ]] || die "no local clone of '$proj' found under \$DEV/~/proj/~/dev; clone it first"
 else
   repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" \
     || die "not inside a git repo (cd into the repo, or pass an MR url)"
@@ -57,12 +86,12 @@ fi
 if [[ -z "$iid" ]]; then
   list="$(
     {
-      glab mr list "${repo_flag[@]}" --reviewer=@me -F json -P 50 2>/dev/null
-      glab mr list "${repo_flag[@]}" --assignee=@me -F json -P 50 2>/dev/null
+      (cd "$repo_root" && glab mr list --reviewer=@me -F json -P 50 2>/dev/null)
+      (cd "$repo_root" && glab mr list --assignee=@me -F json -P 50 2>/dev/null)
     } | jq -s 'add | unique_by(.iid)'
   )"
   [[ "$(jq 'length' <<<"$list")" -gt 0 ]] || \
-    list="$(glab mr list "${repo_flag[@]}" -F json -P 50 2>/dev/null)"
+    list="$(cd "$repo_root" && glab mr list -F json -P 50 2>/dev/null)"
   [[ "$(jq 'length' <<<"$list")" -gt 0 ]] || die "no open MRs found"
 
   # Visible column shows the MR number; the iid is repeated as a hidden
@@ -77,12 +106,9 @@ if [[ -z "$iid" ]]; then
 fi
 
 # --- fetch MR metadata -----------------------------------------------------
-mr="$(glab mr view "$iid" "${repo_flag[@]}" -F json)" || die "cannot view MR !$iid"
+mr="$(cd "$repo_root" && glab mr view "$iid" -F json)" || die "cannot view MR !$iid"
 target="$(jq -r '.target_branch' <<<"$mr")"
 [[ -n "$target" && "$target" != null ]] || die "no target branch for MR !$iid"
-
-# A URL-derived repo has no local worktree to attach to; require a local repo.
-[[ -n "$repo_root" ]] || die "MR !$iid is in '$repo_name'; cd into a local clone of that repo and run: tmux-mr $iid"
 
 # --- create / reuse the worktree ------------------------------------------
 # slug ties the worktree dir and the session name together so tmux-mr-switch

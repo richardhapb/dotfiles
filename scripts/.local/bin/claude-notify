@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# claude-notify <event-label>
+#
+# Claude Code Stop / Notification hook target. Reads the hook JSON on stdin
+# and alerts that Claude finished or needs input:
+#   - inside tmux: status-line message + terminal bell
+#   - macOS desktop notification (terminal-notifier, else osascript)
+# The current working directory (project) is shown so you know which checkout.
+#
+# Claude Code captures a hook's stdout, so we can't just print an escape to the
+# terminal — the tmux cue uses tmux commands and the desktop alert uses
+# terminal-notifier/osascript, neither of which relies on this process's stdout.
+set -eo pipefail
+
+label="${1:-Claude Code}"
+# macOS notification sound name (see /System/Library/Sounds): Basso, Blow,
+# Bottle, Frog, Funk, Glass, Hero, Morse, Ping, Pop, Purr, Sosumi, Submarine,
+# Tink. Distinct sounds per event let you tell finished vs. needs-input by ear.
+sound="${2:-Glass}"
+payload="$(cat 2>/dev/null || true)"
+
+# Notification events carry a human-readable .message; Stop does not.
+body="$(printf '%s' "$payload" | jq -r '.message // empty' 2>/dev/null || true)"
+[[ -n "$body" ]] || body="Ready for input"
+
+# Which checkout — the cwd basename (full path on the tmux status line).
+proj="$(basename "$PWD")"
+
+# 1) in-terminal cue via tmux: status line + bell
+if [[ -n "${TMUX:-}" ]]; then
+  tmux display-message "🔔 ${label} — ${proj}: ${body}" 2>/dev/null || true
+  tty="$(tmux display-message -p '#{client_tty}' 2>/dev/null || true)"
+  [[ -n "$tty" && -w "$tty" ]] && printf '\a' > "$tty" 2>/dev/null || true
+fi
+
+# 2) macOS desktop notification
+if command -v terminal-notifier >/dev/null 2>&1; then
+  terminal-notifier -title "$label" -subtitle "$proj" -message "$body" -sound "$sound" >/dev/null 2>&1 || true
+elif command -v osascript >/dev/null 2>&1; then
+  osascript -e "display notification \"${body//\"/\\\"}\" with title \"${label//\"/\\\"}\" subtitle \"${proj//\"/\\\"}\" sound name \"${sound//\"/\\\"}\"" >/dev/null 2>&1 || true
+fi
+
+exit 0
