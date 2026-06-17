@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# brouter-setup — enable Brave-profile URL routing on THIS machine.
+#
+# Routing logic lives in Hammerspoon (hammerspoon/.hammerspoon/brouter.lua) and
+# is portable across machines. This script does the per-machine bits:
+#   1. seed ~/.config/brouter/rules.json (only if missing) with "Default" fallback
+#   2. make Hammerspoon the default http/https handler
+# Profile names differ per machine, so the seeded config routes nothing and
+# falls back to Brave's "Default" profile — edit rules.json to add routes.
+
+set -euo pipefail
+
+CONFIG_DIR="$HOME/.config/brouter"
+CONFIG="$CONFIG_DIR/rules.json"
+
+if [[ ! -f "$CONFIG" ]]; then
+  mkdir -p "$CONFIG_DIR"
+  cat > "$CONFIG" <<'JSON'
+{
+  "rules": [],
+  "default_profile": "Default"
+}
+JSON
+  echo "seeded $CONFIG"
+else
+  echo "config exists, leaving as-is: $CONFIG"
+fi
+
+if ! command -v hs >/dev/null 2>&1; then
+  echo "error: 'hs' CLI not found. Open Hammerspoon and ensure init.lua loads" >&2
+  echo "       hs.ipc (require(\"hs.ipc\")), then re-run." >&2
+  exit 1
+fi
+
+echo "setting Hammerspoon as default browser (macOS may ask you to confirm)..."
+hs -c 'hs.urlevent.setDefaultHandler("http")'  || true
+hs -c 'hs.urlevent.setDefaultHandler("https")' || true
+
+echo "http  -> $(hs -c 'print(hs.urlevent.getDefaultHandler("http"))')"
+echo "https -> $(hs -c 'print(hs.urlevent.getDefaultHandler("https"))')"
+echo "done. edit $CONFIG to add { \"match\": ..., \"profile\": ... } routes."

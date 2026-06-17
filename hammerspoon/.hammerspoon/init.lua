@@ -262,3 +262,9 @@ end)
 
 hs.application.enableSpotlightForNameSearches(true)
 hs.loadSpoon('ControlEscape'):start()
+
+-- Route http(s) URLs to Brave profiles (see brouter.lua + ~/.config/brouter/rules.json).
+-- Portable: this only installs the URL handler. Making Hammerspoon the *default*
+-- browser is a per-machine, one-time step:
+--   hs -c 'hs.urlevent.setDefaultHandler("http")'
+require("brouter")
