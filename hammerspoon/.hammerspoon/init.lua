@@ -1,4 +1,5 @@
 hs.loadSpoon("EmmyLua")
+require("hs.ipc")
 
 -- ISO keyboard fix: put backtick/tilde (`/~) under Escape.
 -- On a Spanish (ISO) Apple keyboard with the US layout, the key below Escape
@@ -118,78 +119,111 @@ end
 
 hs.hotkey.bind({ "alt", "shift" }, "c", mouseHighlight)
 
--- Apple Music controls
-hs.hotkey.bind({ "alt" }, "space", function() hs.itunes.playpause() end)
-hs.hotkey.bind({ "alt" }, "[", function() hs.itunes.previous() end)
-hs.hotkey.bind({ "alt" }, "]", function() hs.itunes.next() end)
-hs.hotkey.bind({ "alt" }, "-", function() hs.itunes.setVolume(math.max(0, hs.itunes.getVolume() - 5)) end)
-hs.hotkey.bind({ "alt" }, "=", function() hs.itunes.setVolume(math.min(100, hs.itunes.getVolume() + 5)) end)
+-- Spotify controls (spotify_player CLI)
+local SPOTIFY_PLAYER = os.getenv("HOME") .. "/.local/bin/spotify_player"
+
+-- Run spotify_player with arbitrary args. cb(code, stdout, stderr) is optional;
+-- without it, a non-zero exit raises a notification.
+local function spRun(args, cb)
+  hs.task.new(SPOTIFY_PLAYER, function(code, out, err)
+    if cb then
+      cb(code, out, err)
+    elseif code ~= 0 then
+      hs.notify.show("spotify_player", "", err or "")
+    end
+  end, args):start()
+end
+
+-- Shorthand for `playback` subcommands.
+local function spotify(...)
+  spRun({ "playback", ... })
+end
+
+hs.hotkey.bind({ "alt" }, "space", function() spotify("play-pause") end)
+hs.hotkey.bind({ "alt" }, "[", function() spotify("previous") end)
+hs.hotkey.bind({ "alt" }, "]", function() spotify("next") end)
+hs.hotkey.bind({ "alt" }, "-", function() spotify("volume", "--offset", "--", "-5") end)
+hs.hotkey.bind({ "alt" }, "=", function() spotify("volume", "--offset", "5") end)
 hs.hotkey.bind({ "alt", "shift" }, "[", function()
-  local ok, _, err = hs.osascript.applescript([[
-    tell application "Music"
-      set favorited of current track to true
-    end tell
-  ]])
-  if ok then hs.alert.show("Liked") else hs.alert.show("Like error: " .. (err or "")) end
+  spRun({ "like" }, function(code, _, err)
+    if code == 0 then hs.alert.show("Liked") else hs.alert.show("Like error: " .. (err or "")) end
+  end)
 end)
+-- Spotify has no "dislike"; closest to the old Apple Music behaviour is unlike.
 hs.hotkey.bind({ "alt", "shift" }, "\\", function()
-  local ok, _, err = hs.osascript.applescript([[
-    tell application "Music"
-      set disliked of current track to true
-    end tell
-  ]])
-  if ok then hs.alert.show("Disliked") else hs.alert.show("Dislike error: " .. (err or "")) end
+  spRun({ "like", "--unlike" }, function(code, _, err)
+    if code == 0 then hs.alert.show("Unliked") else hs.alert.show("Unlike error: " .. (err or "")) end
+  end)
 end)
 hs.hotkey.bind({ "alt", "shift" }, "]", function()
   local prev = hs.window.focusedWindow()
 
-  local ok, playlists = hs.osascript.applescript([[
-    tell application "Music" to return name of every user playlist
-  ]])
-  if not ok or not playlists then
-    hs.alert.show("Could not fetch playlists")
-    return
-  end
-
-  local choices = {}
-  for _, name in ipairs(playlists) do
-    table.insert(choices, { text = name })
-  end
-
-  local chooser = hs.chooser.new(function(choice)
-    if not choice then
-      if prev then prev:focus() end
+  spRun({ "playlist", "list" }, function(code, out)
+    if code ~= 0 or not out then
+      hs.alert.show("Could not fetch playlists")
       return
     end
-    local playlist = choice.text
-    local ok2, _, err = hs.osascript.applescript(string.format([[
-      tell application "Music" to activate
-      tell application "System Events"
-        tell process "Music"
-          set sg to splitter group 1 of window 1
-          set playbackBtns to every button of group 1 of group 2 of sg
-          set moreBtn to missing value
-          repeat with b in playbackBtns
-            if description of b is "More" then
-              set moreBtn to b
-              exit repeat
-            end if
-          end repeat
-          if moreBtn is missing value then error "More button not found"
-          click moreBtn
-          delay 0.2
-          set m to menu 1 of moreBtn
-          click menu item "%s" of menu 1 of menu item "Add to Playlist" of m
-        end tell
-      end tell
-    ]], playlist))
-    if prev then prev:focus() end
-    if ok2 then hs.alert.show("Added to " .. playlist) else hs.alert.show("Playlist error: " .. (err or "")) end
-  end)
 
-  chooser:choices(choices)
-  chooser:show()
+    -- Each line is "<playlist_id>: <name>".
+    local choices = {}
+    for line in out:gmatch("[^\n]+") do
+      local id, name = line:match("^(%S+):%s*(.+)$")
+      if id and name then
+        table.insert(choices, { text = name, subText = id, playlistId = id })
+      end
+    end
+
+    local chooser = hs.chooser.new(function(choice)
+      if prev then prev:focus() end
+      if not choice then return end
+
+      -- Resolve the currently playing track, then add it to the chosen playlist.
+      spRun({ "get", "key", "playback" }, function(c2, out2)
+        local data = out2 and hs.json.decode(out2)
+        local trackId = data and data.item and data.item.id
+        if not trackId then
+          hs.alert.show("No current track")
+          return
+        end
+        spRun({ "playlist", "edit", "--track-id", trackId, "add", choice.playlistId }, function(c3, _, err3)
+          if c3 == 0 then
+            hs.alert.show("Added to " .. choice.text)
+          else
+            hs.alert.show("Playlist error: " .. (err3 or ""))
+          end
+        end)
+      end)
+    end)
+
+    chooser:choices(choices)
+    chooser:show()
+  end)
 end)
+
+-- EarPods / media-key remap -> spotify_player
+-- The EarPods center button (and the keyboard media keys) emit system-defined
+-- media events, not keystrokes. macOS maps the center button as:
+--   single press -> PLAY, double -> NEXT, triple -> PREVIOUS.
+-- We swallow those events so Apple Music never reacts, and drive spotify_player
+-- instead. Note: there is no way to tell EarPods apart from the keyboard media
+-- keys -- both send the identical events, so this captures both.
+-- (SPOTIFY_PLAYER / spotify() are defined in the Spotify controls block above.)
+local mediaKeyActions = {
+  PLAY     = function() spotify("play-pause") end,
+  NEXT     = function() spotify("next") end,
+  PREVIOUS = function() spotify("previous") end,
+}
+
+mediaKeyTap = hs.eventtap.new({ hs.eventtap.event.types.systemDefined }, function(event)
+  local d = event:systemKey()
+  if not d then return false end
+  local action = mediaKeyActions[d.key]
+  -- Fire once, on key-down only (system events send both down and up).
+  if action and d.down then action() end
+  -- Swallow PLAY/NEXT/PREVIOUS entirely; let everything else (volume, etc.) pass.
+  return action ~= nil
+end)
+mediaKeyTap:start()
 
 -- jn timer integration
 local function initJn(category)
