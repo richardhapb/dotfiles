@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "mcp__honcho"
+      "mcp__honcho",
+      "Bash(cd *)"
     ],
     "ask": [
       "Bash(git push:*)"
