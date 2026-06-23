@@ -208,8 +208,35 @@ end)
 -- instead. Note: there is no way to tell EarPods apart from the keyboard media
 -- keys -- both send the identical events, so this captures both.
 -- (SPOTIFY_PLAYER / spotify() are defined in the Spotify controls block above.)
+-- The EarPods center button is a single physical button: it only ever emits
+-- PLAY. macOS normally derives next/previous from the tap count via MediaRemote
+-- (1 tap = play/pause, 2 = next, 3 = previous), but since we swallow those
+-- events that translation never runs -- so we count the taps ourselves.
+local TAP_WINDOW   = 0.4 -- seconds to wait for further taps before acting
+local playTapCount = 0
+local playTapTimer = nil
+
+local function handlePlayTaps()
+  local n = playTapCount
+  playTapCount = 0
+  if n >= 3 then
+    spotify("previous")
+  elseif n == 2 then
+    spotify("next")
+  else
+    spotify("play-pause")
+  end
+end
+
+local function onPlayPress()
+  playTapCount = playTapCount + 1
+  if playTapTimer then playTapTimer:stop() end
+  playTapTimer = hs.timer.doAfter(TAP_WINDOW, handlePlayTaps)
+end
+
 local mediaKeyActions = {
-  PLAY     = function() spotify("play-pause") end,
+  PLAY     = onPlayPress,
+  -- Kept in case a keyboard/other device emits these directly.
   NEXT     = function() spotify("next") end,
   PREVIOUS = function() spotify("previous") end,
 }

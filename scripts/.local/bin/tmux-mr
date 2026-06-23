@@ -66,7 +66,7 @@ if [[ "$arg" == "--clip" || "$arg" == "-c" ]]; then
 fi
 if [[ "$arg" =~ ^https?:// ]]; then
   # https://host/group/sub/project/-/merge_requests/123
-  iid="${arg##*/merge_requests/}"; iid="${iid%%/*}"; iid="${iid%%\?*}"
+  iid="${arg##*/merge_requests/}"; iid="${iid%%/*}"; iid="${iid%%\?*}"; iid="${iid%%#*}"
   proj="${arg#*://*/}"; proj="${proj%%/-/*}"
   [[ -n "$iid" && -n "$proj" ]] || die "could not parse MR url: $arg"
   repo_name="${proj##*/}"
