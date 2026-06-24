@@ -41,14 +41,7 @@ body="$(printf '%s' "$payload" | jq -r '.message // empty' 2>/dev/null || true)"
 # Which checkout — the cwd basename (full path on the tmux status line).
 proj="$(basename "$PWD")"
 
-# 1) in-terminal cue via tmux: status line + bell
-if [[ -n "${TMUX:-}" ]]; then
-  tmux display-message "🔔 ${label} — ${proj}: ${body}" 2>/dev/null || true
-  tty="$(tmux display-message -p '#{client_tty}' 2>/dev/null || true)"
-  [[ -n "$tty" && -w "$tty" ]] && printf '\a' > "$tty" 2>/dev/null || true
-fi
-
-# 2) macOS desktop notification
+# macOS desktop notification
 if command -v terminal-notifier >/dev/null 2>&1; then
   terminal-notifier -title "$label" -subtitle "$proj" -message "$body" -sound "$sound" >/dev/null 2>&1 || true
 elif command -v osascript >/dev/null 2>&1; then

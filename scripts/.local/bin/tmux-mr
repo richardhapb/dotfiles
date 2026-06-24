@@ -1,16 +1,20 @@
 #!/usr/bin/env bash
-# tmux-mr — open a GitLab MR for review in its own tmux session.
+# tmux-mr — open a GitLab MR or GitHub PR for review in its own tmux session.
 #
-# Each MR is checked out into an isolated git worktree (detached at the MR
-# head ref) so several reviews can run at once without touching the main
-# checkout. The session opens nvim on the MR diff vs the target branch.
+# Each MR/PR is checked out into an isolated git worktree (detached at the
+# change head ref) so several reviews can run at once without touching the main
+# checkout. The session opens nvim on the diff vs the target branch.
+#
+# The host is auto-detected: a github.com URL (or a clone whose origin is
+# GitHub) uses `gh` + octo.nvim; anything else uses `glab` + gitlab.nvim. So
+# the same binding handles both Checkr's GitLab and the personal GitHub account.
 #
 # Usage:
-#   tmux-mr            # fzf-pick from MRs I review / am assigned (cwd repo)
-#   tmux-mr <iid>      # open MR by number in the cwd repo
-#   tmux-mr <url>      # open MR by GitLab URL (repo derived from the URL)
+#   tmux-mr            # fzf-pick from MRs/PRs I review / am assigned (cwd repo)
+#   tmux-mr <iid>      # open MR/PR by number in the cwd repo
+#   tmux-mr <url>      # open by GitLab MR or GitHub PR URL (repo from the URL)
 #
-# Switch between / clean up MR sessions with `tmux-mr-switch`.
+# Switch between / clean up review sessions with `tmux-mr-switch`.
 # NOTE: deliberately avoids `swap-window` (broken on macOS until tmux 3.7).
 
 # NB: macOS /bin/bash is 3.2 — no `set -u` (empty-array expansion aborts under
@@ -25,13 +29,22 @@ die() {
   exit 1
 }
 
-command -v glab >/dev/null || die "glab not found"
-command -v jq   >/dev/null || die "jq not found"
+command -v jq >/dev/null || die "jq not found"
 
 WORKTREE_ROOT="${DEV:-$HOME}/.mr-worktrees"
 
-# Locate a local clone whose origin matches the GitLab project path
-# (e.g. "checkr/system/app/region-compliance"), scanning the usual repo roots.
+# Detect whether a repo / URL is GitHub (gh + octo.nvim) or GitLab (glab +
+# gitlab.nvim). Echoes "github" or "gitlab".
+host_kind() {
+  case "$1" in
+    *github*) printf 'github' ;;
+    *)        printf 'gitlab' ;;
+  esac
+}
+
+# Locate a local clone whose origin matches the project path (e.g.
+# "checkr/system/app/region-compliance" or "richardhapb/dotfiles"), scanning the
+# usual repo roots. Host-agnostic: compares the path after scheme+host.
 # Prints the repo toplevel on success.
 find_clone() {
   local projlc base d url p
@@ -60,55 +73,97 @@ find_clone() {
 # --- resolve repo + MR iid -------------------------------------------------
 arg="${1:-}"
 if [[ "$arg" == "--clip" || "$arg" == "-c" ]]; then
-  # prefix o: take the MR from the clipboard (URL, "MR <url>", or a number).
-  arg="$(pbpaste 2>/dev/null | head -1 | sed -E 's/^[[:space:]]*([Mm][Rr][[:space:]]+)?//; s/[[:space:]]+$//')"
+  # prefix o: take the change from the clipboard (URL, "MR/PR <url>", or a number).
+  arg="$(pbpaste 2>/dev/null | head -1 | sed -E 's/^[[:space:]]*(([Mm][Rr]|[Pp][Rr])[[:space:]]+)?//; s/[[:space:]]+$//')"
   [[ -n "$arg" ]] || die "clipboard is empty"
 fi
 if [[ "$arg" =~ ^https?:// ]]; then
-  # https://host/group/sub/project/-/merge_requests/123
-  iid="${arg##*/merge_requests/}"; iid="${iid%%/*}"; iid="${iid%%\?*}"; iid="${iid%%#*}"
-  proj="${arg#*://*/}"; proj="${proj%%/-/*}"
-  [[ -n "$iid" && -n "$proj" ]] || die "could not parse MR url: $arg"
+  kind="$(host_kind "$arg")"
+  if [[ "$kind" == "github" ]]; then
+    # https://github.com/owner/repo/pull/123
+    iid="${arg##*/pull/}"; iid="${iid%%/*}"; iid="${iid%%\?*}"; iid="${iid%%#*}"
+    proj="${arg#*://*/}"; proj="${proj%%/pull/*}"
+    [[ -n "$iid" && -n "$proj" ]] || die "could not parse PR url: $arg"
+  else
+    # https://host/group/sub/project/-/merge_requests/123
+    iid="${arg##*/merge_requests/}"; iid="${iid%%/*}"; iid="${iid%%\?*}"; iid="${iid%%#*}"
+    proj="${arg#*://*/}"; proj="${proj%%/-/*}"
+    [[ -n "$iid" && -n "$proj" ]] || die "could not parse MR url: $arg"
+  fi
   repo_name="${proj##*/}"
-  # Resolve the matching local clone so every glab/git call runs inside it.
+  # Resolve the matching local clone so every glab/gh/git call runs inside it.
   # (A bare `glab -R <path>` would query gitlab.com, not the self-hosted host;
-  # running from the clone lets glab read host + project from its origin.)
+  # running from the clone lets the CLI read host + project from its origin.)
   repo_root="$(find_clone "$proj" || true)"
   [[ -n "$repo_root" ]] || die "no local clone of '$proj' found under \$DEV/~/proj/~/dev; clone it first"
 else
   repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" \
-    || die "not inside a git repo (cd into the repo, or pass an MR url)"
+    || die "not inside a git repo (cd into the repo, or pass an MR/PR url)"
   repo_name="$(basename "$repo_root")"
+  # Detect host from the clone's origin so a bare number routes to gh vs glab.
+  kind="$(host_kind "$(git -C "$repo_root" remote get-url origin 2>/dev/null)")"
   iid="$arg"; iid="${iid#!}"; iid="${iid#\#}"
 fi
 
-# --- pick an MR if no iid was given ---------------------------------------
-if [[ -z "$iid" ]]; then
-  list="$(
-    {
-      (cd "$repo_root" && glab mr list --reviewer=@me -F json -P 50 2>/dev/null)
-      (cd "$repo_root" && glab mr list --assignee=@me -F json -P 50 2>/dev/null)
-    } | jq -s 'add | unique_by(.iid)'
-  )"
-  [[ "$(jq 'length' <<<"$list")" -gt 0 ]] || \
-    list="$(cd "$repo_root" && glab mr list -F json -P 50 2>/dev/null)"
-  [[ "$(jq 'length' <<<"$list")" -gt 0 ]] || die "no open MRs found"
+if [[ "$kind" == "github" ]]; then
+  command -v gh >/dev/null || die "gh not found"
+else
+  command -v glab >/dev/null || die "glab not found"
+fi
 
-  # Visible column shows the MR number; the iid is repeated as a hidden
-  # trailing field for parsing (fzf returns the whole line regardless).
-  line="$(
-    jq -r '.[] | "!\(.iid)  \(.title)  (\(.source_branch) → \(.target_branch))  @\(.author.username)\t\(.iid)"' <<<"$list" \
-      | fzf --with-nth=1 --delimiter='\t' --prompt='MR > ' \
-            --header='enter: open review' --no-multi
-  )" || exit 0
+# --- pick an MR/PR if no iid was given -------------------------------------
+if [[ -z "$iid" ]]; then
+  if [[ "$kind" == "github" ]]; then
+    # GitHub: PRs where I'm requested as reviewer or assigned, deduped by number.
+    list="$(
+      {
+        (cd "$repo_root" && gh pr list --search "review-requested:@me" \
+          --json number,title,headRefName,baseRefName,author -L 50 2>/dev/null)
+        (cd "$repo_root" && gh pr list --assignee=@me \
+          --json number,title,headRefName,baseRefName,author -L 50 2>/dev/null)
+      } | jq -s 'add | unique_by(.number)'
+    )"
+    [[ "$(jq 'length' <<<"$list")" -gt 0 ]] || \
+      list="$(cd "$repo_root" && gh pr list --json number,title,headRefName,baseRefName,author -L 50 2>/dev/null)"
+    [[ "$(jq 'length' <<<"$list")" -gt 0 ]] || die "no open PRs found"
+
+    line="$(
+      jq -r '.[] | "#\(.number)  \(.title)  (\(.headRefName) -> \(.baseRefName))  @\(.author.login)\t\(.number)"' <<<"$list" \
+        | fzf --with-nth=1 --delimiter='\t' --prompt='PR > ' \
+              --header='enter: open review' --no-multi
+    )" || exit 0
+  else
+    list="$(
+      {
+        (cd "$repo_root" && glab mr list --reviewer=@me -F json -P 50 2>/dev/null)
+        (cd "$repo_root" && glab mr list --assignee=@me -F json -P 50 2>/dev/null)
+      } | jq -s 'add | unique_by(.iid)'
+    )"
+    [[ "$(jq 'length' <<<"$list")" -gt 0 ]] || \
+      list="$(cd "$repo_root" && glab mr list -F json -P 50 2>/dev/null)"
+    [[ "$(jq 'length' <<<"$list")" -gt 0 ]] || die "no open MRs found"
+
+    # Visible column shows the MR number; the iid is repeated as a hidden
+    # trailing field for parsing (fzf returns the whole line regardless).
+    line="$(
+      jq -r '.[] | "!\(.iid)  \(.title)  (\(.source_branch) → \(.target_branch))  @\(.author.username)\t\(.iid)"' <<<"$list" \
+        | fzf --with-nth=1 --delimiter='\t' --prompt='MR > ' \
+              --header='enter: open review' --no-multi
+    )" || exit 0
+  fi
   [[ -n "$line" ]] || exit 0
   iid="${line##*$'\t'}"
 fi
 
-# --- fetch MR metadata -----------------------------------------------------
-mr="$(cd "$repo_root" && glab mr view "$iid" -F json)" || die "cannot view MR !$iid"
-target="$(jq -r '.target_branch' <<<"$mr")"
-[[ -n "$target" && "$target" != null ]] || die "no target branch for MR !$iid"
+# --- fetch change metadata (target branch) ---------------------------------
+if [[ "$kind" == "github" ]]; then
+  target="$(cd "$repo_root" && gh pr view "$iid" --json baseRefName -q .baseRefName)" \
+    || die "cannot view PR #$iid"
+else
+  mr="$(cd "$repo_root" && glab mr view "$iid" -F json)" || die "cannot view MR !$iid"
+  target="$(jq -r '.target_branch' <<<"$mr")"
+fi
+[[ -n "$target" && "$target" != null ]] || die "no target branch for #$iid"
 
 # --- create / reuse the worktree ------------------------------------------
 # slug ties the worktree dir and the session name together so tmux-mr-switch
@@ -116,20 +171,31 @@ target="$(jq -r '.target_branch' <<<"$mr")"
 # session-option storage, survives a tmux restart).
 slug="$(printf '%s' "${repo_name}-${iid}" | tr . _)"
 wt="$WORKTREE_ROOT/$slug"
-git -C "$repo_root" fetch -q origin "refs/merge-requests/${iid}/head" "$target"
+if [[ "$kind" == "github" ]]; then
+  head_ref="refs/pull/${iid}/head"
+else
+  head_ref="refs/merge-requests/${iid}/head"
+fi
+git -C "$repo_root" fetch -q origin "$head_ref" "$target"
 if [[ ! -d "$wt" ]]; then
   git -C "$repo_root" worktree add -f --detach "$wt" FETCH_HEAD
 fi
 
 # --- session --------------------------------------------------------------
-session="mr-$slug"
+# Prefix by kind so the picker (and the eye) can tell PRs from MRs: pr-<slug>
+# for GitHub, mr-<slug> for GitLab. The worktree dir stays just <slug>.
+if [[ "$kind" == "github" ]]; then session="pr-$slug"; else session="mr-$slug"; fi
 if ! tmux has-session -t "=$session" 2>/dev/null; then
   tmux new-session -ds "$session" -c "$wt"
   tmux rename-window -t "=$session:1" review
-  # Review in gitlab.nvim (inline threads / approve), not just a diff view.
-  # CheckrMRReview (checkr_mr.lua) checks out the MR's source branch in this
-  # worktree and opens gitlab.nvim's reviewer.
-  tmux send-keys -t "=$session:1" "nvim -c 'CheckrMRReview ${iid}'" Enter
+  # Review in the editor's reviewer (inline threads / approve), not just a diff
+  # view. CheckrMRReview/GhPRReview (checkr_mr.lua / gh_pr.lua) check out the
+  # change's source branch in this worktree and open gitlab.nvim / octo.nvim.
+  if [[ "$kind" == "github" ]]; then
+    tmux send-keys -t "=$session:1" "nvim -c 'GhPRReview ${iid}'" Enter
+  else
+    tmux send-keys -t "=$session:1" "nvim -c 'CheckrMRReview ${iid}'" Enter
+  fi
 fi
 
 if [[ -n "${TMUX:-}" ]]; then

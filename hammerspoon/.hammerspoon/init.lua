@@ -212,9 +212,30 @@ end)
 -- PLAY. macOS normally derives next/previous from the tap count via MediaRemote
 -- (1 tap = play/pause, 2 = next, 3 = previous), but since we swallow those
 -- events that translation never runs -- so we count the taps ourselves.
-local TAP_WINDOW   = 0.4 -- seconds to wait for further taps before acting
-local playTapCount = 0
-local playTapTimer = nil
+-- We also distinguish a hold (press > HOLD_THRESHOLD) and use it to mute the mic.
+local TAP_WINDOW     = 0.4 -- seconds to wait for further taps before acting
+local HOLD_THRESHOLD = 0.6 -- press held longer than this = mic mute toggle
+local playTapCount   = 0
+local playTapTimer   = nil
+local holdTimer      = nil
+local heldFired      = false
+
+-- Toggle the default input device's mute state.
+local function toggleMicMute()
+  local dev = hs.audiodevice.defaultInputDevice()
+  if not dev then hs.alert.show("No input device"); return end
+
+  local muted = dev:inputMuted()
+  if muted ~= nil then
+    dev:setInputMuted(not muted)
+    hs.alert.show(not muted and "Mic muted 🔇" or "Mic unmuted 🎙️")
+  else
+    -- Device doesn't report mute support; fall back to zeroing input volume.
+    local vol = dev:inputVolume() or 0
+    dev:setInputVolume(vol > 0 and 0 or 100)
+    hs.alert.show(vol > 0 and "Mic muted 🔇" or "Mic unmuted 🎙️")
+  end
+end
 
 local function handlePlayTaps()
   local n = playTapCount
@@ -228,14 +249,30 @@ local function handlePlayTaps()
   end
 end
 
-local function onPlayPress()
+-- PLAY key-down: arm the hold timer (ignore auto-repeat presses).
+local function onPlayDown()
+  heldFired = false
+  if holdTimer then holdTimer:stop() end
+  holdTimer = hs.timer.doAfter(HOLD_THRESHOLD, function()
+    heldFired = true
+    toggleMicMute()
+  end)
+end
+
+-- PLAY key-up: if the hold already fired, swallow the release; otherwise it was
+-- a discrete tap, so feed the tap counter.
+local function onPlayUp()
+  if holdTimer then holdTimer:stop(); holdTimer = nil end
+  if heldFired then
+    heldFired = false
+    return
+  end
   playTapCount = playTapCount + 1
   if playTapTimer then playTapTimer:stop() end
   playTapTimer = hs.timer.doAfter(TAP_WINDOW, handlePlayTaps)
 end
 
 local mediaKeyActions = {
-  PLAY     = onPlayPress,
   -- Kept in case a keyboard/other device emits these directly.
   NEXT     = function() spotify("next") end,
   PREVIOUS = function() spotify("previous") end,
@@ -244,6 +281,15 @@ local mediaKeyActions = {
 mediaKeyTap = hs.eventtap.new({ hs.eventtap.event.types.systemDefined }, function(event)
   local d = event:systemKey()
   if not d then return false end
+  -- PLAY needs both edges: down arms the hold timer, up decides tap vs hold.
+  if d.key == "PLAY" then
+    if d.down then
+      if not d.repeated then onPlayDown() end
+    else
+      onPlayUp()
+    end
+    return true
+  end
   local action = mediaKeyActions[d.key]
   -- Fire once, on key-down only (system events send both down and up).
   if action and d.down then action() end

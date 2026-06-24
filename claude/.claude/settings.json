@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "mcp__honcho",
-      "Bash(cd *)"
+      "Bash(cd *)",
+      "Bash(hmt *)"
     ],
     "ask": [
       "Bash(git push:*)"

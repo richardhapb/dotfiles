@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
-# tmux-mr-switch — fzf picker over MR reviews (created by tmux-mr).
+# tmux-mr-switch — fzf picker over MR/PR reviews (created by tmux-mr).
 #
-# Lists the union of live `mr-*` tmux sessions AND worktree dirs under
-# $WORKTREE_ROOT, joined on the slug (<repo>-<iid>), with each MR's state
+# Lists the union of live `mr-*` / `pr-*` tmux sessions AND worktree dirs under
+# $WORKTREE_ROOT, joined on the slug (<repo>-<iid>), with each change's state
 # (open/merged/closed). A worktree with no live session shows "no session".
+#
+# Kind (GitHub PR vs GitLab MR) is detected per slug from the worktree's origin
+# (falling back to whichever prefixed session is live), so state lookups and the
+# reopen command route to gh/octo.nvim or glab/gitlab.nvim accordingly.
 #
 #   enter   switch to the session, or re-open it from the worktree if orphaned
 #   ctrl-x  remove the git worktree + kill its session, and stay in the picker
@@ -22,35 +26,68 @@ SELF="$(cd "$(dirname "$0")" 2>/dev/null && pwd)/$(basename "$0")"
 
 C_GRN=$'\033[32m' C_MAG=$'\033[35m' C_RED=$'\033[31m' C_GRY=$'\033[90m' C_RST=$'\033[0m'
 
-# MR state (opened/merged/closed) via glab, run inside the worktree so it hits
-# the right GitLab host. One network call per row — fine for a handful of MRs.
-mr_state() {
-  local wt="$1" iid="$2" st
-  { [[ -d "$wt" ]] && command -v glab >/dev/null && command -v jq >/dev/null; } || { printf '?'; return; }
-  st="$(cd "$wt" && glab mr view "$iid" -F json 2>/dev/null | jq -r '.state // empty' 2>/dev/null)"
+# "github" or "gitlab" from any origin URL / string.
+host_kind() {
+  case "$1" in
+    *github*) printf 'github' ;;
+    *)        printf 'gitlab' ;;
+  esac
+}
+
+# Kind for a slug: from the worktree's origin if present, else from whichever
+# prefixed session is live (pr- => github), else default gitlab.
+kind_of() {
+  local slug="$1" wt="$WORKTREE_ROOT/$slug"
+  if [[ -d "$wt" ]]; then
+    host_kind "$(git -C "$wt" remote get-url origin 2>/dev/null)"
+  elif tmux has-session -t "=pr-$slug" 2>/dev/null; then
+    printf 'github'
+  else
+    printf 'gitlab'
+  fi
+}
+
+# Change state (opened/merged/closed) via gh/glab, run inside the worktree so it
+# hits the right host. One network call per row — fine for a handful of changes.
+change_state() {
+  local wt="$1" iid="$2" kind="$3" st
+  [[ -d "$wt" ]] || { printf '?'; return; }
+  if [[ "$kind" == "github" ]]; then
+    command -v gh >/dev/null || { printf '?'; return; }
+    # gh returns OPEN/MERGED/CLOSED — lower-case it to match the case below.
+    st="$(cd "$wt" && gh pr view "$iid" --json state -q '.state' 2>/dev/null | tr '[:upper:]' '[:lower:]')"
+  else
+    { command -v glab >/dev/null && command -v jq >/dev/null; } || { printf '?'; return; }
+    st="$(cd "$wt" && glab mr view "$iid" -F json 2>/dev/null | jq -r '.state // empty' 2>/dev/null)"
+  fi
   printf '%s' "${st:-?}"
 }
 
-# One fzf row for a slug: "!<iid>  <repo>  [<state>]  <session>" + hidden slug.
+# One fzf row for a slug: "<mark><iid>  <repo>  [<state>]  <session>" + hidden slug.
 row() {
-  local slug="$1" iid repo sess mstate st
+  local slug="$1" iid repo sess cstate st kind pre mark
   iid="${slug##*-}"; repo="${slug%-*}"
-  if tmux has-session -t "=mr-$slug" 2>/dev/null; then sess="●"; else sess="○ no session"; fi
-  mstate="$(mr_state "$WORKTREE_ROOT/$slug" "$iid")"
-  case "$mstate" in
-    opened) st="${C_GRN}open${C_RST}" ;;
-    merged) st="${C_MAG}merged${C_RST}" ;;
-    closed) st="${C_RED}closed${C_RST}" ;;
-    *)      st="${C_GRY}?${C_RST}" ;;
+  kind="$(kind_of "$slug")"
+  if [[ "$kind" == "github" ]]; then pre="pr"; mark="#"; else pre="mr"; mark="!"; fi
+  if tmux has-session -t "=$pre-$slug" 2>/dev/null; then sess="●"; else sess="○ no session"; fi
+  cstate="$(change_state "$WORKTREE_ROOT/$slug" "$iid" "$kind")"
+  case "$cstate" in
+    open|opened) st="${C_GRN}open${C_RST}" ;;
+    merged)      st="${C_MAG}merged${C_RST}" ;;
+    closed)      st="${C_RED}closed${C_RST}" ;;
+    *)           st="${C_GRY}?${C_RST}" ;;
   esac
-  printf '!%s  %s  [%s]  %s\t%s\n' "$iid" "$repo" "$st" "$sess" "$slug"
+  printf '%s%s  %s  [%s]  %s\t%s\n' "$mark" "$iid" "$repo" "$st" "$sess" "$slug"
 }
 
-# All rows: union of live mr-* sessions and worktree dirs, deduped by slug.
+# All rows: union of live mr-*/pr-* sessions and worktree dirs, deduped by slug.
 list_rows() {
   local slugs=() uniq_slugs=() s d slug
-  while IFS= read -r s; do [[ -n "$s" ]] && slugs+=("${s#mr-}"); done \
-    < <(tmux list-sessions -F '#{session_name}' 2>/dev/null | grep '^mr-' || true)
+  while IFS= read -r s; do
+    [[ -n "$s" ]] || continue
+    s="${s#mr-}"; s="${s#pr-}"   # strip whichever prefix it carries
+    slugs+=("$s")
+  done < <(tmux list-sessions -F '#{session_name}' 2>/dev/null | grep -E '^(mr|pr)-' || true)
   if [[ -d "$WORKTREE_ROOT" ]]; then
     for d in "$WORKTREE_ROOT"/*/; do
       [[ -d "$d" ]] || continue
@@ -65,9 +102,9 @@ list_rows() {
 
 # Remove a worktree (recover the main repo from its common git dir) + session.
 remove_one() {
-  local slug="$1" session wt gitdir repo_root
+  local slug="$1" wt gitdir repo_root pre
   [[ -n "$slug" ]] || return 0
-  session="mr-$slug"; wt="$WORKTREE_ROOT/$slug"
+  wt="$WORKTREE_ROOT/$slug"
   if [[ -d "$wt" ]]; then
     gitdir="$(git -C "$wt" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
     repo_root="${gitdir%/.git}"
@@ -78,7 +115,10 @@ remove_one() {
       rm -rf "$wt"
     fi
   fi
-  if tmux has-session -t "=$session" 2>/dev/null; then tmux kill-session -t "=$session"; fi
+  # Kill either prefix — only one exists for a given slug, the other is a no-op.
+  for pre in mr pr; do
+    if tmux has-session -t "=$pre-$slug" 2>/dev/null; then tmux kill-session -t "=$pre-$slug"; fi
+  done
 }
 
 # Subcommands re-invoked by fzf's ctrl-x binding.
@@ -88,13 +128,13 @@ case "${1:-}" in
 esac
 
 initial="$(list_rows)"
-[[ -n "$initial" ]] || { printf 'no MR worktrees or sessions\n' >&2; exit 0; }
+[[ -n "$initial" ]] || { printf 'no MR/PR worktrees or sessions\n' >&2; exit 0; }
 
 # ctrl-x removes the worktree+session silently and reloads — the picker stays
 # open so you can clear several at once. enter accepts and exits with the row.
 slug="$(
   printf '%s\n' "$initial" \
-    | fzf --ansi --delimiter='\t' --with-nth=1 --prompt='MR > ' \
+    | fzf --ansi --delimiter='\t' --with-nth=1 --prompt='MR/PR > ' \
           --header='enter: open/switch    ctrl-x: remove (stays open)' \
           --bind "ctrl-x:execute-silent($SELF --rm {2})+reload($SELF --list)" \
           --no-multi \
@@ -102,7 +142,9 @@ slug="$(
 )" || exit 0
 [[ -n "$slug" ]] || exit 0
 
-session="mr-$slug"
+kind="$(kind_of "$slug")"
+if [[ "$kind" == "github" ]]; then pre="pr"; else pre="mr"; fi
+session="$pre-$slug"
 wt="$WORKTREE_ROOT/$slug"
 
 # enter: switch to the session, or re-open it from the worktree if orphaned.
@@ -111,7 +153,11 @@ if ! tmux has-session -t "=$session" 2>/dev/null; then
   iid="${slug##*-}"
   tmux new-session -ds "$session" -c "$wt"
   tmux rename-window -t "=$session:1" review
-  tmux send-keys -t "=$session:1" "nvim -c 'CheckrMRReview ${iid}'" Enter
+  if [[ "$kind" == "github" ]]; then
+    tmux send-keys -t "=$session:1" "nvim -c 'GhPRReview ${iid}'" Enter
+  else
+    tmux send-keys -t "=$session:1" "nvim -c 'CheckrMRReview ${iid}'" Enter
+  fi
 fi
 
 if [[ -n "${TMUX:-}" ]]; then
