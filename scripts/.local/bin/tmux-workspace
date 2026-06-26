@@ -4,11 +4,11 @@
 # working on right now. Pin state is a per-session tmux option, @pinned=1.
 #
 # Two fzf front-ends share all the logic:
-#   * popup    (prefix T)   — display-popup overlay, closes on jump/esc.
-#   * sidebar  (prefix C-t) — a toggleable left pane that follows you on jump.
+#   * popup    (prefix A) — display-popup overlay, closes on jump/esc.
+#   * sidebar  (prefix a) — a toggleable left pane that follows you on jump.
 #
 #   enter         switch to the session
-#   ctrl-a        add a session to the list (pick from your other sessions)
+#   ctrl-s        add a session to the list (pick from your other sessions)
 #   ctrl-r        remove the highlighted session from the list (unpin; not killed)
 #   ctrl-x        kill the highlighted session
 #   j/k, g/G      navigate the list
@@ -92,6 +92,9 @@ sidebar_follow() { # $1 = target session name
     tmux set-option -p -t "$new_pane" @ws_sidebar 1
     tmux select-pane -t "$main_pane"
   fi
+  # Keep sidebar mode on in the destination so it persists across its windows.
+  local tsid; tsid="$(sid_of "$1")"
+  [[ -n "$tsid" ]] && tmux set-option -t "$tsid" @sidebar_on 1
   tmux kill-pane -t "$self_pane"
 }
 
@@ -103,9 +106,9 @@ sidebar() {
     sel="$(
       list_rows | fzf --ansi --delimiter='	' --with-nth=1 --no-multi \
         --prompt='session > ' \
-        --header='enter:jump ^a:add ^r:remove ^x:kill  jk:move ^h/l:panes' \
+        --header='enter:jump ^s:add ^r:remove ^x:kill  jk:move ^h/l:panes' \
         --bind 'j:down,k:up,g:first,G:last' \
-        --bind "ctrl-a:execute($SELF --add)+reload($SELF --list)+clear-query" \
+        --bind "ctrl-s:execute($SELF --add)+reload($SELF --list)+clear-query" \
         --bind "ctrl-r:execute-silent($SELF --unpin {2})+reload($SELF --list)" \
         --bind "ctrl-x:execute-silent($SELF --kill {2})+reload($SELF --list)" \
         --bind "ctrl-h:execute-silent(tmux select-pane -L)" \
@@ -119,21 +122,48 @@ sidebar() {
   done
 }
 
-# prefix C-t: open the sidebar if absent; focus it if open but not focused;
-# close it only when you're already inside it.
+# Spawn an unfocused sidebar in $1's window and mark it; focus stays on $1.
+spawn_sidebar() { # $1 = pane to split from (stays focused)
+  local new_pane
+  new_pane="$(tmux split-window -hbf -l 30 -t "$1" -P -F '#{pane_id}' "$SELF --sidebar")"
+  tmux set-option -p -t "$new_pane" @ws_sidebar 1
+  tmux select-pane -t "$1"
+}
+
+# --ensure-sidebar: invoked by the session-window-changed hook. Re-creates the
+# sidebar in the window you just moved to, if this session has sidebar mode on
+# and the window doesn't already have one. Keeps the sidebar present across all
+# windows of the session.
+ensure_sidebar() {
+  local cur
+  cur="${TMUX_PANE:-$(tmux display-message -p '#{pane_id}')}"
+  [[ "$(tmux display-message -t "$cur" -p '#{@sidebar_on}' 2>/dev/null)" == "1" ]] || return 0
+  tmux list-panes -t "$cur" -F '#{@ws_sidebar}' 2>/dev/null | grep -q 1 && return 0
+  spawn_sidebar "$cur"
+}
+
+# prefix a: turn sidebar mode on (open + focus) if off; if on, focus the
+# sidebar in this window, or close it (mode off, remove all) when you're in it.
 toggle_sidebar() {
-  local pane cur
-  pane="$(tmux list-panes -F '#{pane_id} #{@ws_sidebar}' 2>/dev/null | awk '$2=="1"{print $1; exit}')"
-  if [[ -z "$pane" ]]; then
-    tmux split-window -hbf -l 30 "$SELF --sidebar"
-    tmux set-option -p @ws_sidebar 1
-    return
-  fi
-  cur="$(tmux display-message -p '#{pane_id}')"
-  if [[ "$pane" == "$cur" ]]; then
-    tmux kill-pane -t "$pane"
-  else
+  local cur on ssid pane new_pane p
+  cur="${TMUX_PANE:-$(tmux display-message -p '#{pane_id}')}"
+  on="$(tmux display-message -t "$cur" -p '#{@sidebar_on}' 2>/dev/null)"
+  ssid="$(tmux display-message -t "$cur" -p '#{session_id}')"
+  pane="$(tmux list-panes -t "$cur" -F '#{pane_id} #{@ws_sidebar}' | awk '$2=="1"{print $1; exit}')"
+  if [[ "$on" != "1" ]]; then
+    tmux set-option -t "$ssid" @sidebar_on 1
+    new_pane="$(tmux split-window -hbf -l 30 -t "$cur" -P -F '#{pane_id}' "$SELF --sidebar")"
+    tmux set-option -p -t "$new_pane" @ws_sidebar 1
+    tmux select-pane -t "$new_pane"
+  elif [[ "$pane" == "$cur" ]]; then
+    # inside the sidebar -> turn mode off and remove every sidebar in the session
+    tmux set-option -t "$ssid" @sidebar_on 0
+    tmux list-panes -s -t "$cur" -F '#{pane_id} #{@ws_sidebar}' \
+      | awk '$2=="1"{print $1}' | while read -r p; do tmux kill-pane -t "$p"; done
+  elif [[ -n "$pane" ]]; then
     tmux select-pane -t "$pane"
+  else
+    spawn_sidebar "$cur"
   fi
 }
 
@@ -145,16 +175,17 @@ case "${1:-}" in
   --kill)           kill_session "$2"; exit 0 ;;
   --sidebar)        sidebar; exit 0 ;;
   --toggle-sidebar) toggle_sidebar; exit 0 ;;
+  --ensure-sidebar) ensure_sidebar; exit 0 ;;
 esac
 
 # Empty list (nothing pinned yet) is fine — fzf shows nothing and ctrl-a adds.
 sel="$(
   list_rows | fzf --ansi --delimiter='	' --with-nth=1 --no-multi \
     --prompt='session > ' \
-    --header='enter:jump  ^a:add  ^r:remove  ^x:kill' \
+    --header='enter:jump  ^s:add  ^r:remove  ^x:kill' \
     --preview "$SELF --preview {2}" --preview-window=right:45% \
     --bind 'j:down,k:up,g:first,G:last' \
-    --bind "ctrl-a:execute($SELF --add)+reload($SELF --list)+clear-query" \
+    --bind "ctrl-s:execute($SELF --add)+reload($SELF --list)+clear-query" \
     --bind "ctrl-r:execute-silent($SELF --unpin {2})+reload($SELF --list)" \
     --bind "ctrl-x:execute-silent($SELF --kill {2})+reload($SELF --list)"
 )" || exit 0
