@@ -119,15 +119,21 @@ sidebar() {
   done
 }
 
-# prefix C-t: open the sidebar if absent in this window, else close it.
+# prefix C-t: open the sidebar if absent; focus it if open but not focused;
+# close it only when you're already inside it.
 toggle_sidebar() {
-  local pane
+  local pane cur
   pane="$(tmux list-panes -F '#{pane_id} #{@ws_sidebar}' 2>/dev/null | awk '$2=="1"{print $1; exit}')"
-  if [[ -n "$pane" ]]; then
-    tmux kill-pane -t "$pane"
-  else
+  if [[ -z "$pane" ]]; then
     tmux split-window -hbf -l 30 "$SELF --sidebar"
     tmux set-option -p @ws_sidebar 1
+    return
+  fi
+  cur="$(tmux display-message -p '#{pane_id}')"
+  if [[ "$pane" == "$cur" ]]; then
+    tmux kill-pane -t "$pane"
+  else
+    tmux select-pane -t "$pane"
   fi
 }
 
