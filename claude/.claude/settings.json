@@ -9,6 +9,7 @@
       "Bash(git push:*)"
     ]
   },
+  "model": "opus",
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -92,5 +93,5 @@
   "effortLevel": "medium",
   "theme": "dark-daltonized",
   "editorMode": "vim",
-  "model": "opus"
+  "tui": "fullscreen"
 }
