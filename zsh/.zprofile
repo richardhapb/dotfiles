@@ -146,6 +146,11 @@ alias rr=gqrx  # I never remember this name  -- rr because "Radio"
 alias lr='ln -sf $(pwd)/target/release/$(dirname $(pwd)) ~/.local/bin'
 alias ld='ln -sf $(pwd)/target/debug/$(dirname $(pwd)) ~/.local/bin'
 
+esp() {
+  source "$HOME/export-esp.sh"
+  source "$DEV/esp/export.sh"
+}
+
 alias h='eval $(history 0 | sort -r | sed -E "s/\s*[0-9]+\s+//" | uniq | fzf)'
 alias v="NVIM_LSP_ENABLED=1 nvim"
 alias vw="NVIM_LSP_ENABLED=0 nvim"
@@ -327,3 +332,8 @@ export ZVM_INSTALL="$HOME/.zvm/self"
 export PATH="$PATH:$HOME/.zvm/bin"
 export PATH="$PATH:$ZVM_INSTALL/"
 
+# >>> grok installer >>>
+export PATH="$HOME/.grok/bin:$PATH"
+fpath=(~/.grok/completions/zsh $fpath)
+autoload -Uz compinit && compinit -C
+# <<< grok installer <<<

@@ -6,7 +6,6 @@ docker-compose.override.yml
 tags
 notes.txt
 notes.md
-.nvim
 sync.sh
 comments
 plan.txt
