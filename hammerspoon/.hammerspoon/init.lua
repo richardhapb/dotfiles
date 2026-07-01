@@ -48,6 +48,7 @@ end)
 -- workspace P; if it's already running, just fall back to AeroSpace's
 -- ordinary workspace-switch behavior.
 local AEROSPACE = "/opt/homebrew/bin/aerospace"
+local DRAWING_PATH = os.getenv("HOME") .. "/.local/bin/just_draw"
 
 local function findDrawingWindow()
   for _, win in ipairs(hs.window.allWindows()) do
@@ -62,26 +63,35 @@ hs.hotkey.bind({ "alt" }, "p", function()
     return
   end
 
-  local drawing_path = os.getenv("HOME") .. "/.local/bin/just_draw"
-  local task = hs.task.new(drawing_path, function(code, _, stderr)
+  -- just_draw doesn't quit when its window is closed -- it keeps running in
+  -- the background holding the tablet device, which blocks a fresh instance
+  -- from ever opening a window. Clear out any such stale process first.
+  hs.execute("pkill -f " .. DRAWING_PATH)
+
+  local task = hs.task.new(DRAWING_PATH, function(code, _, stderr)
     if code ~= 0 then hs.notify.show("Just Draw", stderr) end
   end)
+  if not task then return end
+  task:start()
 
-  if task then
-    task:start()
-    local attempt = 0
-    while true do
-      hs.execute("sleep 0.2")
-      if findDrawingWindow() then break end
-      if attempt >= 5 then
-        hs.notify.show("Error", "Cannot find drawing window", "")
-        task:terminate()
-        return
-      end
-      attempt = attempt + 1
+  -- Poll asynchronously: a blocking loop here would stall Hammerspoon's run
+  -- loop, which is exactly what starves the accessibility notifications that
+  -- make the new window show up in hs.window.allWindows().
+  local attempt = 0
+  local function waitForWindow()
+    if findDrawingWindow() then
+      hs.execute(AEROSPACE .. " move-node-to-workspace --focus-follows-window P")
+      return
     end
-    hs.execute(AEROSPACE .. " move-node-to-workspace --focus-follows-window P")
+    attempt = attempt + 1
+    if attempt >= 15 then
+      hs.notify.show("Error", "Cannot find drawing window", "")
+      task:terminate()
+      return
+    end
+    hs.timer.doAfter(0.2, waitForWindow)
   end
+  hs.timer.doAfter(0.2, waitForWindow)
 end)
 
 -- Spotify controls (spotify_player CLI)
