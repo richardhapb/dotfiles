@@ -48,10 +48,9 @@ local function resize_window(position)
   win:setFrame(f)
 end
 
-hs.hotkey.bind({ "alt", "shift" }, "h", function() resize_window("l") end)
-hs.hotkey.bind({ "alt", "shift" }, "l", function() resize_window("r") end)
-hs.hotkey.bind({ "alt", "shift" }, "k", function() resize_window("t") end)
-hs.hotkey.bind({ "alt", "shift" }, "j", function() resize_window("b") end)
+-- Half-snapping (alt+shift+h/j/k/l) is delegated to AeroSpace, which owns those
+-- chords for moving tiled windows. Only the fullscreen snap remains here for
+-- floating windows AeroSpace doesn't tile.
 hs.hotkey.bind({ "alt" }, "f", function() resize_window("f") end)
 
 -- Recover all visible windows to center
@@ -142,8 +141,8 @@ end
 hs.hotkey.bind({ "alt" }, "space", function() spotify("play-pause") end)
 hs.hotkey.bind({ "alt" }, "[", function() spotify("previous") end)
 hs.hotkey.bind({ "alt" }, "]", function() spotify("next") end)
-hs.hotkey.bind({ "alt" }, "-", function() spotify("volume", "--offset", "--", "-5") end)
-hs.hotkey.bind({ "alt" }, "=", function() spotify("volume", "--offset", "5") end)
+hs.hotkey.bind({ "alt" }, "down", function() spotify("volume", "--offset", "--", "-5") end)
+hs.hotkey.bind({ "alt" }, "up", function() spotify("volume", "--offset", "5") end)
 hs.hotkey.bind({ "alt", "shift" }, "[", function()
   spRun({ "like" }, function(code, _, err)
     if code == 0 then hs.alert.show("Liked") else hs.alert.show("Like error: " .. (err or "")) end
@@ -297,44 +296,6 @@ mediaKeyTap = hs.eventtap.new({ hs.eventtap.event.types.systemDefined }, functio
   return action ~= nil
 end)
 mediaKeyTap:start()
-
--- jn timer integration
-local function initJn(category)
-  local b, description = hs.dialog.textPrompt(
-    "[" .. category .. "] Insert the description", "Task to do it", "", "OK", "Cancel"
-  )
-  if b == "Cancel" or not description then
-    return
-  end
-
-  local jnPath = "/Users/richard/.local/bin/jn"
-  hs.alert.show("Starting timer for: " .. category)
-
-  local cmd = string.format(
-    "nohup %s -t 1h -c %q -n break -d -l %q > /tmp/jn.log 2>&1 &",
-    jnPath, category, description
-  )
-
-  local ok = hs.task.new("/bin/sleep", function(exitCode, _, _)
-    if exitCode == 0 then
-      hs.notify.show("Time has been finalized", description, "Task completed")
-    end
-  end, { "3600" }):start()
-
-  if not ok then hs.alert.show("Error starting sleep command") end
-  local _, status = hs.execute(cmd)
-  if not status then hs.alert.show("Failed to start detached task") end
-end
-
-hs.hotkey.bind({ "alt" }, "/", function() initJn("programming") end)
-hs.hotkey.bind({ "alt" }, ".", function() initJn("work") end)
-hs.hotkey.bind({ "alt" }, ",", function()
-  local b, category = hs.dialog.textPrompt("Insert category", "Indicate topic", "work", "OK", "Cancel")
-  if b == "Cancel" or not category then
-    return
-  end
-  initJn(category)
-end)
 
 -- Neospeller
 hs.hotkey.bind({ "alt" }, "g", function()
