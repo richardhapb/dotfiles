@@ -24,34 +24,8 @@ end)
 
 hs.window.animationDuration = 0
 
--- Window snapping / resizing
-local function resize_window(position)
-  local win    = hs.window.focusedWindow()
-  local screen = win:screen()
-  local max    = screen:frame()
-  local f      = win:frame()
-
-  if position == "l" then
-    f.x = max.x; f.y = max.y; f.w = max.w / 2; f.h = max.h
-  elseif position == "r" then
-    f.x = max.x + max.w / 2; f.y = max.y; f.w = max.w / 2; f.h = max.h
-  elseif position == "t" then
-    f.x = max.x; f.y = max.y; f.w = max.w; f.h = max.h / 2
-  elseif position == "b" then
-    f.x = max.x; f.y = max.y + max.h / 2; f.w = max.w; f.h = max.h / 2
-  elseif position == "f" then
-    f.x = max.x; f.y = max.y; f.w = max.w; f.h = max.h
-  else
-    hs.alert.show("Incorrect direction: " .. position)
-    return
-  end
-  win:setFrame(f)
-end
-
--- Half-snapping (alt+shift+h/j/k/l) is delegated to AeroSpace, which owns those
--- chords for moving tiled windows. Only the fullscreen snap remains here for
--- floating windows AeroSpace doesn't tile.
-hs.hotkey.bind({ "alt" }, "f", function() resize_window("f") end)
+-- Window snapping (alt+shift+h/j/k/l move, alt+f fullscreen) is delegated to
+-- AeroSpace, which owns those chords.
 
 -- Recover all visible windows to center
 hs.hotkey.bind({ "alt", "cmd" }, "r", function()
@@ -68,8 +42,26 @@ hs.hotkey.bind({ "alt", "cmd" }, "r", function()
   hs.alert.show("Windows recovered 🔥")
 end)
 
--- Drawing tool
+-- Drawing tool: alt+p normally belongs to AeroSpace (switch to workspace P),
+-- but Hammerspoon claims the chord here to bootstrap the tool on first use.
+-- If the drawing window doesn't exist yet, launch it and drop it into
+-- workspace P; if it's already running, just fall back to AeroSpace's
+-- ordinary workspace-switch behavior.
+local AEROSPACE = "/opt/homebrew/bin/aerospace"
+
+local function findDrawingWindow()
+  for _, win in ipairs(hs.window.allWindows()) do
+    if win:title():find("JUST%sDRAW") then return win end
+  end
+  return nil
+end
+
 hs.hotkey.bind({ "alt" }, "p", function()
+  if findDrawingWindow() then
+    hs.execute(AEROSPACE .. " workspace P")
+    return
+  end
+
   local drawing_path = os.getenv("HOME") .. "/.local/bin/just_draw"
   local task = hs.task.new(drawing_path, function(code, _, stderr)
     if code ~= 0 then hs.notify.show("Just Draw", stderr) end
@@ -80,10 +72,7 @@ hs.hotkey.bind({ "alt" }, "p", function()
     local attempt = 0
     while true do
       hs.execute("sleep 0.2")
-      local win = hs.window.focusedWindow()
-      if win and win:title():find("JUST%sDRAW") then
-        break
-      end
+      if findDrawingWindow() then break end
       if attempt >= 5 then
         hs.notify.show("Error", "Cannot find drawing window", "")
         task:terminate()
@@ -91,32 +80,9 @@ hs.hotkey.bind({ "alt" }, "p", function()
       end
       attempt = attempt + 1
     end
+    hs.execute(AEROSPACE .. " move-node-to-workspace --focus-follows-window P")
   end
 end)
-
--- Mouse highlight
-local mouseCircle      = nil
-local mouseCircleTimer = nil
-
-local function mouseHighlight()
-  if mouseCircle then
-    mouseCircle:delete()
-    if mouseCircleTimer then mouseCircleTimer:stop() end
-  end
-  local mousepoint = hs.mouse.absolutePosition()
-  mouseCircle = hs.drawing.circle(hs.geometry.rect(mousepoint.x - 40, mousepoint.y - 40, 80, 80))
-  if not mouseCircle then return end
-  mouseCircle:setStrokeColor({ red = 1, blue = 0, green = 0, alpha = 1 })
-  mouseCircle:setFill(false)
-  mouseCircle:setStrokeWidth(5)
-  mouseCircle:show()
-  mouseCircleTimer = hs.timer.doAfter(2, function()
-    mouseCircle:delete()
-    mouseCircle = nil
-  end)
-end
-
-hs.hotkey.bind({ "alt", "shift" }, "c", mouseHighlight)
 
 -- Spotify controls (spotify_player CLI)
 local SPOTIFY_PLAYER = os.getenv("HOME") .. "/.local/bin/spotify_player"
@@ -300,32 +266,6 @@ mediaKeyTap:start()
 -- Neospeller
 hs.hotkey.bind({ "alt" }, "g", function()
   hs.execute("~/.local/bin/ns-clip", true)
-end)
-
--- Quick Note: open a NEW Quick Note (alt+n)
--- Temporarily disables "resume last Quick Note" so fn+Q opens a fresh note,
--- then restores the original preference.
-hs.hotkey.bind({ "alt", "shift" }, "n", function()
-  local currentVal, _, _ = hs.execute("defaults read com.apple.Notes ICShouldResumeLastQuickNote 2>/dev/null")
-  currentVal = currentVal:gsub("%s+", "")
-
-  -- Disable "resume last" so Quick Note opens a new blank note
-  hs.execute("defaults write com.apple.Notes ICShouldResumeLastQuickNote -bool false")
-
-  -- Open Quick Note via fn+Q
-  hs.eventtap.keyStroke({ "fn" }, "q", 0)
-
-  -- Restore original preference after Quick Note has opened
-  hs.timer.doAfter(0.5, function()
-    if currentVal == "1" then
-      hs.execute("defaults write com.apple.Notes ICShouldResumeLastQuickNote -bool true")
-    elseif currentVal == "0" then
-      -- was already false, leave it
-    else
-      -- key didn't exist (default = resume last), restore by deleting
-      hs.execute("defaults delete com.apple.Notes ICShouldResumeLastQuickNote 2>/dev/null")
-    end
-  end)
 end)
 
 hs.application.enableSpotlightForNameSearches(true)
