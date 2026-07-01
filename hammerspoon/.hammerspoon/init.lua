@@ -44,9 +44,10 @@ end)
 
 -- Drawing tool: alt+p normally belongs to AeroSpace (switch to workspace P),
 -- but Hammerspoon claims the chord here to bootstrap the tool on first use.
--- If the drawing window doesn't exist yet, launch it and drop it into
--- workspace P; if it's already running, just fall back to AeroSpace's
--- ordinary workspace-switch behavior.
+-- Once the drawing window exists, the hotkey below disables itself so
+-- AeroSpace's own native 'workspace P' binding handles the chord directly --
+-- scanning hs.window.allWindows() and shelling out to the aerospace CLI on
+-- every keypress added ~250ms versus AeroSpace's in-process switch.
 local AEROSPACE = "/opt/homebrew/bin/aerospace"
 local DRAWING_PATH = os.getenv("HOME") .. "/.local/bin/just_draw"
 
@@ -57,12 +58,7 @@ local function findDrawingWindow()
   return nil
 end
 
-hs.hotkey.bind({ "alt" }, "p", function()
-  if findDrawingWindow() then
-    hs.execute(AEROSPACE .. " workspace P")
-    return
-  end
-
+local drawHotkey = hs.hotkey.bind({ "alt" }, "p", function()
   -- just_draw doesn't quit when its window is closed -- it keeps running in
   -- the background holding the tablet device, which blocks a fresh instance
   -- from ever opening a window. Clear out any such stale process first.
@@ -93,6 +89,14 @@ hs.hotkey.bind({ "alt" }, "p", function()
   end
   hs.timer.doAfter(0.2, waitForWindow)
 end)
+
+-- windowCreated/windowDestroyed don't fire retroactively, so sync the initial
+-- state in case the tool is already running when Hammerspoon (re)loads.
+if findDrawingWindow() then drawHotkey:disable() end
+
+local drawFilter = hs.window.filter.new("just_draw")
+drawFilter:subscribe(hs.window.filter.windowCreated, function() drawHotkey:disable() end)
+drawFilter:subscribe(hs.window.filter.windowDestroyed, function() drawHotkey:enable() end)
 
 -- Spotify controls (spotify_player CLI)
 local SPOTIFY_PLAYER = os.getenv("HOME") .. "/.local/bin/spotify_player"
