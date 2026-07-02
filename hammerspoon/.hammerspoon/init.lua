@@ -24,8 +24,8 @@ end)
 
 hs.window.animationDuration = 0
 
--- Window snapping (alt+shift+h/j/k/l move, alt+f fullscreen) is delegated to
--- AeroSpace, which owns those chords.
+-- App focus/launch bindings (alt+1..9, alt+letter, alt+tab) live in apps.lua.
+require("apps")
 
 -- Recover all visible windows to center
 hs.hotkey.bind({ "alt", "cmd" }, "r", function()
@@ -41,62 +41,6 @@ hs.hotkey.bind({ "alt", "cmd" }, "r", function()
   end
   hs.alert.show("Windows recovered 🔥")
 end)
-
--- Drawing tool: alt+p normally belongs to AeroSpace (switch to workspace P),
--- but Hammerspoon claims the chord here to bootstrap the tool on first use.
--- Once the drawing window exists, the hotkey below disables itself so
--- AeroSpace's own native 'workspace P' binding handles the chord directly --
--- scanning hs.window.allWindows() and shelling out to the aerospace CLI on
--- every keypress added ~250ms versus AeroSpace's in-process switch.
-local AEROSPACE = "/opt/homebrew/bin/aerospace"
-local DRAWING_PATH = os.getenv("HOME") .. "/.local/bin/just_draw"
-
-local function findDrawingWindow()
-  for _, win in ipairs(hs.window.allWindows()) do
-    if win:title():find("JUST%sDRAW") then return win end
-  end
-  return nil
-end
-
-local drawHotkey = hs.hotkey.bind({ "alt" }, "p", function()
-  -- just_draw doesn't quit when its window is closed -- it keeps running in
-  -- the background holding the tablet device, which blocks a fresh instance
-  -- from ever opening a window. Clear out any such stale process first.
-  hs.execute("pkill -f " .. DRAWING_PATH)
-
-  local task = hs.task.new(DRAWING_PATH, function(code, _, stderr)
-    if code ~= 0 then hs.notify.show("Just Draw", stderr) end
-  end)
-  if not task then return end
-  task:start()
-
-  -- Poll asynchronously: a blocking loop here would stall Hammerspoon's run
-  -- loop, which is exactly what starves the accessibility notifications that
-  -- make the new window show up in hs.window.allWindows().
-  local attempt = 0
-  local function waitForWindow()
-    if findDrawingWindow() then
-      hs.execute(AEROSPACE .. " move-node-to-workspace --focus-follows-window P")
-      return
-    end
-    attempt = attempt + 1
-    if attempt >= 15 then
-      hs.notify.show("Error", "Cannot find drawing window", "")
-      task:terminate()
-      return
-    end
-    hs.timer.doAfter(0.2, waitForWindow)
-  end
-  hs.timer.doAfter(0.2, waitForWindow)
-end)
-
--- windowCreated/windowDestroyed don't fire retroactively, so sync the initial
--- state in case the tool is already running when Hammerspoon (re)loads.
-if findDrawingWindow() then drawHotkey:disable() end
-
-local drawFilter = hs.window.filter.new("just_draw")
-drawFilter:subscribe(hs.window.filter.windowCreated, function() drawHotkey:disable() end)
-drawFilter:subscribe(hs.window.filter.windowDestroyed, function() drawHotkey:enable() end)
 
 -- Spotify controls (spotify_player CLI)
 local SPOTIFY_PLAYER = os.getenv("HOME") .. "/.local/bin/spotify_player"

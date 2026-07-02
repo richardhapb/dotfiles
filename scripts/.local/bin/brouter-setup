@@ -7,6 +7,9 @@
 #   2. make Hammerspoon the default http/https handler
 # Profile names differ per machine, so the seeded config routes nothing and
 # falls back to Brave's "Default" profile — edit rules.json to add routes.
+# The "profiles" map (work/personal aliases -> profile directory + Profiles-menu
+# name) is also read by the alt+2/alt+3 app switcher in apps.lua; fix its
+# values for this machine after seeding.
 
 set -euo pipefail
 
@@ -18,7 +21,11 @@ if [[ ! -f "$CONFIG" ]]; then
   cat > "$CONFIG" <<'JSON'
 {
   "rules": [],
-  "default_profile": "Default"
+  "default_profile": "Default",
+  "profiles": {
+    "work": { "dir": "Default", "menu": "Work" },
+    "personal": { "dir": "Default", "menu": "Personal" }
+  }
 }
 JSON
   echo "seeded $CONFIG"
