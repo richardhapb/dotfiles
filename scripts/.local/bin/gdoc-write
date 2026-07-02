@@ -1,0 +1,237 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#   "google-auth",
+#   "google-api-python-client",
+# ]
+# ///
+"""gdoc-write: push a markdown file (or stdin) into a Google Doc via the Docs API.
+
+One-time setup (grants Docs + Drive scope to your gcloud ADC credentials):
+
+    gcloud auth application-default login --scopes=openid,\
+https://www.googleapis.com/auth/userinfo.email,\
+https://www.googleapis.com/auth/documents,\
+https://www.googleapis.com/auth/drive
+
+Usage:
+    gdoc-write <doc-id-or-url> --file note.md [--replace | --append] [--dry-run]
+    cat note.md | gdoc-write <doc-id-or-url> --replace
+
+Supported markdown subset: # / ## / ### headings, - / * bullets, 1. numbered
+lists, ``` fenced code blocks (rendered monospace), **bold**, `inline code`,
+and [text](url) links. Anything else is inserted as a plain paragraph.
+
+--append is the default and inserts before the document's trailing newline,
+separated from existing content by a blank line. --replace wipes the body
+first. --dry-run prints the parsed blocks without calling the API.
+"""
+
+import argparse
+import re
+import sys
+
+import google.auth
+from googleapiclient.discovery import build
+
+SCOPES = [
+    "https://www.googleapis.com/auth/documents",
+    "https://www.googleapis.com/auth/drive",
+]
+
+DOC_URL_RE = re.compile(r"/d/([a-zA-Z0-9_-]+)")
+
+
+def resolve_doc_id(ref: str) -> str:
+    match = DOC_URL_RE.search(ref)
+    return match.group(1) if match else ref
+
+
+def parse_inline(text: str):
+    """Strip **bold**, `code`, [text](url) markers, returning (plain_text, spans).
+
+    Each span is (start, end, style_dict) with offsets into plain_text.
+    """
+    spans = []
+    out = []
+    i = 0
+    n = len(text)
+    while i < n:
+        bold = re.match(r"\*\*(.+?)\*\*", text[i:])
+        code = re.match(r"`(.+?)`", text[i:])
+        link = re.match(r"\[(.+?)\]\((\S+?)\)", text[i:])
+        if bold:
+            start = len("".join(out))
+            out.append(bold.group(1))
+            spans.append((start, start + len(bold.group(1)), {"bold": True}))
+            i += bold.end()
+        elif code:
+            start = len("".join(out))
+            out.append(code.group(1))
+            spans.append(
+                (
+                    start,
+                    start + len(code.group(1)),
+                    {"weightedFontFamily": {"fontFamily": "Consolas"}},
+                )
+            )
+            i += code.end()
+        elif link:
+            start = len("".join(out))
+            out.append(link.group(1))
+            spans.append((start, start + len(link.group(1)), {"link": {"url": link.group(2)}}))
+            i += link.end()
+        else:
+            out.append(text[i])
+            i += 1
+    return "".join(out), spans
+
+
+def style_fields(style: dict) -> str:
+    if "link" in style:
+        return "link"
+    if "bold" in style:
+        return "bold"
+    if "weightedFontFamily" in style:
+        return "weightedFontFamily"
+    return ",".join(style.keys())
+
+
+def markdown_to_requests(md_text: str, start_index: int):
+    requests = []
+    index = start_index
+    in_code_block = False
+
+    for raw_line in md_text.splitlines():
+        line = raw_line.rstrip("\n")
+
+        if line.strip().startswith("```"):
+            in_code_block = not in_code_block
+            continue
+
+        heading_level = None
+        bullet = False
+        numbered = False
+        body = line
+
+        if in_code_block:
+            pass
+        elif m := re.match(r"^(#{1,3})\s+(.*)$", line):
+            heading_level = len(m.group(1))
+            body = m.group(2)
+        elif m := re.match(r"^[-*]\s+(.*)$", line):
+            bullet = True
+            body = m.group(1)
+        elif m := re.match(r"^\d+\.\s+(.*)$", line):
+            numbered = True
+            body = m.group(1)
+
+        plain, spans = parse_inline(body)
+        text = plain + "\n"
+
+        requests.append({"insertText": {"location": {"index": index}, "text": text}})
+
+        if heading_level:
+            requests.append(
+                {
+                    "updateParagraphStyle": {
+                        "range": {"startIndex": index, "endIndex": index + len(text)},
+                        "paragraphStyle": {"namedStyleType": f"HEADING_{heading_level}"},
+                        "fields": "namedStyleType",
+                    }
+                }
+            )
+        elif bullet:
+            requests.append(
+                {
+                    "createParagraphBullets": {
+                        "range": {"startIndex": index, "endIndex": index + len(text)},
+                        "bulletPreset": "BULLET_DISC_CIRCLE_SQUARE",
+                    }
+                }
+            )
+        elif numbered:
+            requests.append(
+                {
+                    "createParagraphBullets": {
+                        "range": {"startIndex": index, "endIndex": index + len(text)},
+                        "bulletPreset": "NUMBERED_DECIMAL_ALPHA_ROMAN",
+                    }
+                }
+            )
+        elif in_code_block:
+            requests.append(
+                {
+                    "updateTextStyle": {
+                        "range": {"startIndex": index, "endIndex": index + len(plain)},
+                        "textStyle": {"weightedFontFamily": {"fontFamily": "Consolas"}},
+                        "fields": "weightedFontFamily",
+                    }
+                }
+            )
+
+        for s, e, style in spans:
+            requests.append(
+                {
+                    "updateTextStyle": {
+                        "range": {"startIndex": index + s, "endIndex": index + e},
+                        "textStyle": style,
+                        "fields": style_fields(style),
+                    }
+                }
+            )
+
+        index += len(text)
+
+    return requests, index
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("doc", help="Google Doc ID or URL")
+    parser.add_argument("--file", help="Markdown file to write (default: stdin)")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--append", action="store_true", help="Append before the doc's trailing newline (default)")
+    mode.add_argument("--replace", action="store_true", help="Wipe the doc body first")
+    parser.add_argument("--dry-run", action="store_true", help="Print parsed requests, don't call the API")
+    args = parser.parse_args()
+
+    md_text = open(args.file).read() if args.file else sys.stdin.read()
+    doc_id = resolve_doc_id(args.doc)
+
+    if args.dry_run:
+        requests, _ = markdown_to_requests(md_text, start_index=1)
+        for r in requests:
+            print(r)
+        return
+
+    creds, _ = google.auth.default(scopes=SCOPES)
+    service = build("docs", "v1", credentials=creds)
+
+    doc = service.documents().get(documentId=doc_id).execute()
+    body_content = doc["body"]["content"]
+    end_index = body_content[-1]["endIndex"]
+
+    requests = []
+
+    if args.replace:
+        if end_index > 2:
+            requests.append({"deleteContentRange": {"range": {"startIndex": 1, "endIndex": end_index - 1}}})
+        content_requests, _ = markdown_to_requests(md_text, start_index=1)
+    else:
+        insertion_index = end_index - 1
+        prefix = "\n" if end_index > 2 else ""
+        if prefix:
+            requests.append({"insertText": {"location": {"index": insertion_index}, "text": prefix}})
+            insertion_index += len(prefix)
+        content_requests, _ = markdown_to_requests(md_text, start_index=insertion_index)
+
+    requests.extend(content_requests)
+
+    service.documents().batchUpdate(documentId=doc_id, body={"requests": requests}).execute()
+    print(f"Updated https://docs.google.com/document/d/{doc_id}/edit")
+
+
+if __name__ == "__main__":
+    main()

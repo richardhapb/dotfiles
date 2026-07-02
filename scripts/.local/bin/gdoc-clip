@@ -1,0 +1,84 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#   "markdown",
+# ]
+# ///
+"""gdoc-clip: reformat clipboard markdown into Google-Docs-pasteable rich text.
+
+Reads the current clipboard as markdown, converts it to HTML, and writes it
+back to the clipboard as rich (HTML) content with the original markdown kept
+as the plain-text fallback. Paste (Cmd+V) into a Google Doc and headings,
+bold, lists, links, and code render as real formatting instead of raw
+markdown syntax.
+
+macOS only (uses pbpaste + osascript to set clipboard formats).
+
+Usage:
+    gdoc-clip            # convert clipboard in place
+    gdoc-clip --html     # print the generated HTML instead of touching the clipboard
+"""
+
+import argparse
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+import markdown as md
+
+APPLESCRIPT = """
+on run argv
+    set htmlPath to item 1 of argv
+    set txtPath to item 2 of argv
+    set htmlData to read (POSIX file htmlPath) as «class HTML»
+    set plainData to read (POSIX file txtPath) as text
+    set the clipboard to {«class HTML»:htmlData, string:plainData}
+end run
+"""
+
+
+def markdown_to_html(text: str) -> str:
+    body = md.markdown(text, extensions=["fenced_code", "tables", "sane_lists"])
+    body = body.replace("<code>", '<code style="font-family: Consolas, monospace;">')
+    body = body.replace("<pre>", '<pre style="font-family: Consolas, monospace;">')
+    return f"<html><body>{body}</body></html>"
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--html", action="store_true", help="Print generated HTML instead of writing the clipboard")
+    args = parser.parse_args()
+
+    if sys.platform != "darwin":
+        sys.exit("gdoc-clip only supports macOS (pbpaste/osascript).")
+
+    markdown_text = subprocess.run(["pbpaste"], capture_output=True, text=True, check=True).stdout
+    if not markdown_text.strip():
+        sys.exit("Clipboard is empty.")
+
+    html = markdown_to_html(markdown_text)
+
+    if args.html:
+        print(html)
+        return
+
+    with tempfile.TemporaryDirectory() as tmp:
+        html_path = Path(tmp) / "clip.html"
+        txt_path = Path(tmp) / "clip.txt"
+        html_path.write_text(html)
+        txt_path.write_text(markdown_text)
+
+        subprocess.run(
+            ["osascript", "-", str(html_path), str(txt_path)],
+            input=APPLESCRIPT,
+            text=True,
+            check=True,
+        )
+
+    print("Clipboard is now Google-Docs-ready — paste with Cmd+V.")
+
+
+if __name__ == "__main__":
+    main()
