@@ -44,6 +44,13 @@ local function braveProfile(alias)
 end
 
 -- just_draw: focus the existing window, or launch and focus once it appears.
+-- hs.window.allWindows() only enumerates the CURRENT Space, so once the
+-- drawing window lives on another Space a fresh scan can't see it -- and
+-- relaunching wipes the canvas. Instead, cache the hs.window handle when the
+-- window is created (AX references stay valid across Spaces) and drop it when
+-- the window is destroyed.
+local drawingWin = nil
+
 local function findDrawingWindow()
   for _, win in ipairs(hs.window.allWindows()) do
     if win:title():find("JUST%sDRAW") then return win end
@@ -51,13 +58,15 @@ local function findDrawingWindow()
   return nil
 end
 
-local function focusDrawing()
-  local win = findDrawingWindow()
-  if win then
-    win:focus()
-    return
-  end
+-- windowCreated/windowDestroyed don't fire retroactively, so sync the initial
+-- state in case the tool is already running when Hammerspoon (re)loads.
+drawingWin = findDrawingWindow()
 
+local drawFilter = hs.window.filter.new("just_draw")
+drawFilter:subscribe(hs.window.filter.windowCreated, function(w) drawingWin = w end)
+drawFilter:subscribe(hs.window.filter.windowDestroyed, function() drawingWin = nil end)
+
+local function launchDrawing()
   -- just_draw doesn't quit when its window is closed -- it keeps running in
   -- the background holding the tablet device, which blocks a fresh instance
   -- from ever opening a window. Clear out any such stale process first.
@@ -76,6 +85,7 @@ local function focusDrawing()
   local function waitForWindow()
     local w = findDrawingWindow()
     if w then
+      drawingWin = w
       w:focus()
       return
     end
@@ -88,6 +98,44 @@ local function focusDrawing()
     hs.timer.doAfter(0.2, waitForWindow)
   end
   hs.timer.doAfter(0.2, waitForWindow)
+end
+
+local function focusDrawing()
+  -- Prefer the cached handle: it can focus the window from any Space.
+  if drawingWin then
+    local ok = pcall(function() drawingWin:focus() end)
+    if ok and drawingWin:application() then return end
+    drawingWin = nil -- handle went stale (window closed without a destroy event)
+  end
+
+  local win = findDrawingWindow()
+  if win then
+    drawingWin = win
+    win:focus()
+    return
+  end
+
+  -- No window handle anywhere, but the process may still be alive with a
+  -- window Hammerspoon can't enumerate (e.g. after a reload while the window
+  -- sits on another Space). Activate the app and check whether its window
+  -- lands in the current Space before concluding it's a stale headless
+  -- process -- relaunching wipes the canvas, so only do it as a last resort.
+  local app = hs.application.get("just_draw")
+  if app then
+    app:activate()
+    hs.timer.doAfter(0.5, function()
+      local w = findDrawingWindow()
+      if w then
+        drawingWin = w
+        w:focus()
+      else
+        launchDrawing()
+      end
+    end)
+    return
+  end
+
+  launchDrawing()
 end
 
 local APPS = {
@@ -128,5 +176,6 @@ hs.hotkey.bind({ "alt" }, "tab", function()
   if previousApp then hs.application.launchOrFocusByBundleID(previousApp) end
 end)
 
--- Keep the watcher referenced via package.loaded so it isn't garbage-collected.
-return { appWatcher = appWatcher }
+-- Keep the watcher and window filter referenced via package.loaded so they
+-- aren't garbage-collected.
+return { appWatcher = appWatcher, drawFilter = drawFilter }
