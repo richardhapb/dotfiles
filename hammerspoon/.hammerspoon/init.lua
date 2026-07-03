@@ -42,6 +42,12 @@ hs.hotkey.bind({ "alt", "cmd" }, "r", function()
   hs.alert.show("Windows recovered 🔥")
 end)
 
+-- Spotify controls. Plain hotkeys talking to the desktop app -- unlike the
+-- media keys below, these have no native MediaRemote counterpart to collide with.
+hs.hotkey.bind({ "alt" }, "space", function() hs.spotify.playpause() end)
+hs.hotkey.bind({ "alt" }, "[", function() hs.spotify.previous() end)
+hs.hotkey.bind({ "alt" }, "]", function() hs.spotify.next() end)
+
 -- EarPods / media keys: handled natively by macOS (MediaRemote does its own
 -- tap counting and delivers play-pause/next/previous to the now-playing app).
 -- Don't intercept them: an eventtap can't block that delivery, so any handling

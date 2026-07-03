@@ -21,6 +21,7 @@ Usage:
 """
 
 import argparse
+import re
 import subprocess
 import sys
 import tempfile
@@ -33,17 +34,60 @@ on run argv
     set htmlPath to item 1 of argv
     set txtPath to item 2 of argv
     set htmlData to read (POSIX file htmlPath) as «class HTML»
-    set plainData to read (POSIX file txtPath) as text
+    set plainData to read (POSIX file txtPath) as «class utf8»
     set the clipboard to {«class HTML»:htmlData, string:plainData}
 end run
 """
 
 
+LIST_ITEM = re.compile(r"^\s*([-*+]|\d+\.)\s+")
+
+
+def normalize_lists(text: str) -> str:
+    """Insert the blank line python-markdown requires before a list.
+
+    Markdown like `**Label**\n- item` keeps the hyphens as literal paragraph
+    text, which Google Docs' markdown auto-detection then re-interprets on
+    paste — swallowing following code-block lines into the list.
+    Fenced code blocks are left untouched.
+    """
+    out = []
+    in_fence = False
+    prev = ""
+    for line in text.splitlines():
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+        elif not in_fence and LIST_ITEM.match(line) and prev.strip() and not LIST_ITEM.match(prev):
+            out.append("")
+        out.append(line)
+        prev = line
+    return "\n".join(out)
+
+
+CODE_BLOCK = re.compile(r"<pre><code[^>]*>(.*?)</code></pre>", re.DOTALL)
+
+
+def code_block_as_table(match: re.Match) -> str:
+    """Render a fenced code block as a single-cell table.
+
+    Google Docs' paste handler doesn't treat <pre> as a solid block: when a
+    list precedes it, the code lines get absorbed into the open list and
+    each line grows a bullet. A table cell can't be merged into a list.
+    """
+    code = match.group(1).rstrip("\n").replace("\n", "<br>")
+    return (
+        '<table style="border-collapse: collapse; width: 100%;"><tr>'
+        '<td style="border: 1px solid #d0d0d0; background-color: #f6f8fa; padding: 8px;'
+        ' font-family: \'Courier New\', monospace; font-size: 10pt;">'
+        f"{code}</td></tr></table>"
+    )
+
+
 def markdown_to_html(text: str) -> str:
-    body = md.markdown(text, extensions=["fenced_code", "tables", "sane_lists"])
-    body = body.replace("<code>", '<code style="font-family: Consolas, monospace;">')
-    body = body.replace("<pre>", '<pre style="font-family: Consolas, monospace;">')
-    return f"<html><body>{body}</body></html>"
+    body = md.markdown(normalize_lists(text), extensions=["fenced_code", "tables", "sane_lists"])
+    body = CODE_BLOCK.sub(code_block_as_table, body)
+    body = body.replace("<code>", "<code style=\"font-family: 'Courier New', monospace;\">")
+    return f'<html><head><meta charset="utf-8"></head><body>{body}</body></html>'
 
 
 def main():
