@@ -138,6 +138,26 @@ local function focusDrawing()
   launchDrawing()
 end
 
+-- Focus an app by name, jumping to its fullscreen Space if needed.
+-- hs.application.launchOrFocus only *activates* the app, and with
+-- AppleSpacesSwitchOnActivate off (System Settings > Desktop & Dock >
+-- "When switching to an application, switch to a Space with open windows...")
+-- macOS won't follow the window to its Space. Focusing a concrete window via
+-- AX switches Spaces regardless of that setting. mainWindow() is AX-based so
+-- it sees windows on other Spaces (allWindows() returns 0 for some apps,
+-- e.g. Telegram, so don't rely on it).
+local function focusApp(name)
+  return function()
+    local app = hs.application.get(name)
+    local win = app and (app:mainWindow() or app:allWindows()[1])
+    if win then
+      win:focus()
+    else
+      hs.application.launchOrFocus(name)
+    end
+  end
+end
+
 local APPS = {
   ["1"] = "Ghostty",
   ["2"] = braveProfile("personal"),
@@ -154,7 +174,7 @@ local APPS = {
 for key, target in pairs(APPS) do
   local fn = target
   if type(target) == "string" then
-    fn = function() hs.application.launchOrFocus(target) end
+    fn = focusApp(target)
   end
   hs.hotkey.bind({ "alt" }, key, fn)
 end
