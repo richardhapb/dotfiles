@@ -32,10 +32,10 @@ export PATH="/opt/homebrew/opt/ruby/bin:$PATH"
 
 # This ensures the use of gsed instead of the mac version of sed
 export PATH="/opt/homebrew/opt/gnu-sed/libexec/gnubin:$PATH"
-alias sed='gsed'
-alias find='gfind'
-alias perf='gperf'
-alias awk='gawk'
+# alias sed='gsed'
+# alias find='gfind'
+# alias perf='gperf'
+# alias awk='gawk'
 help() { 
     args="$@"
     bash -c "help $args" 2> /dev/null

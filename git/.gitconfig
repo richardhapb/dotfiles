@@ -32,6 +32,8 @@
     defaultBranch = main
 [includeif "gitdir:~/dev/**"]
     path = ~/.gitconfig-work
+[includeif "gitdir:~/wip/**"]
+    path = ~/.gitconfig-work
 [rerere]
     enabled = true
 # Machine-specific config (commit signing, etc.). Optional; git ignores it if missing.
