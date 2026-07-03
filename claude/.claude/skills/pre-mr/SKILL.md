@@ -1,6 +1,6 @@
 ---
 name: pre-mr
-description: Pre-MR self-review of Richard's current branch — diff against master, surface what reviewers will catch, and ask Richard up to 3 targeted questions about intent and assumptions before reporting. Use when Richard says "review my branch", "pre-mr", "self-review", or otherwise asks for a review of his own in-progress work before opening the MR. Asks bounded clarifying questions — does NOT ask on 3rd-party MR reviews (use `mr-review` for those).
+description: Pre-MR self-review of Richard's current branch — diff against master, surface what reviewers will catch, and ask Richard up to 3 targeted questions about intent and assumptions before reporting. Use when Richard says "review my branch", "pre-mr", "self-review", or otherwise asks for a review of his own in-progress work before opening the MR. Asks bounded clarifying questions — does NOT ask on 3rd-party MR reviews (use `mr-review` for those). Note: Check the origin to see if it is github or gitlab, if it is github: pr=mr
 ---
 
 # Pre-MR self-review
@@ -13,22 +13,39 @@ The author *is* in the room. Ask targeted questions about intent and assumptions
 
 ### 1. Inspect the branch
 
-**First, make sure master is up to date.** A diff against a stale local master will produce false positives ("you're missing X" when X already merged). Fetch before diffing:
+**First, make sure main or master is up to date.** A diff against a stale local master will produce false positives ("you're missing X" when X already merged). Fetch before diffing:
+
+Check the main branch
 
 ```bash
-git fetch origin master              # update remote-tracking ref
+BRANCH="$(git symbolic-ref refs/remotes/origin/HEAD | sed 's/.*\/origin\///')"
+echo "$BRANCH"
 ```
 
-Then diff against `origin/master` (not local `master`, which may lag):
+Verify host
+
+```bash
+HOST="$(git remote show origin | grep Fetch | sed 's/Fetch URL: //')"
+echo $HOST | grep github 2>&1 > /dev/null && echo github || echo gitlab
+echo $HOST  # Double check
+```
+
+Update branch
+
+```bash
+git fetch origin "$BRANCH"              # update remote-tracking ref
+```
+
+Then diff against `origin`:
 
 ```bash
 git status
-git log origin/master..HEAD --oneline
-git diff origin/master...HEAD --stat
-git diff origin/master...HEAD        # full diff — save to file if large
+git log "origin/$BRANCH"..HEAD --oneline
+git diff "origin/$BRANCH"...HEAD --stat
+git diff "origin/$BRANCH"...HEAD        # full diff — save to file if large
 ```
 
-If local `master` is behind `origin/master`, mention it once in the report so Richard knows to rebase before opening the MR — but don't run `git pull` or `git rebase` on his behalf.
+If local is behind `origin`, mention it once in the report so Richard knows to rebase before opening the MR — but don't run `git pull` or `git rebase` on his behalf.
 
 Also note:
 - Branch name (often encodes the ticket — e.g. `ESCR-1584`)
