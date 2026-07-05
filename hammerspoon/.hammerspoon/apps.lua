@@ -72,9 +72,13 @@ local function launchDrawing()
   -- from ever opening a window. Clear out any such stale process first.
   hs.execute("pkill -f " .. DRAWING_PATH)
 
+  -- Pass the arguments table as arg 3: hs.task.new rejects an explicit nil in
+  -- the streamCallback slot ("incorrect type 'nil' for argument 3"), so the
+  -- `nil, { "--udp" }` form threw before the task was ever created -- which is
+  -- why --udp never took effect. Omit the stream callback entirely instead.
   local task = hs.task.new(DRAWING_PATH, function(code, _, stderr)
     if code ~= 0 then hs.notify.show("Just Draw", "", stderr or "") end
-  end)
+  end, { "--udp" })
   if not task then return end
   task:start()
 

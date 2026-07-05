@@ -23,7 +23,7 @@ if [ ! -d "$dest_dir" ]; then
     mkdir -p "$dest_dir"
 fi
 
-# git pull upstream master
+git pull upstream master
 
 sudo rm -rf "$nvim_dir/{.deps,build}"
 sudo make CMAKE_INSTALL_PREFIX="$dest_dir" CMAKE_BUILD_TYPE=RelWithDebInfo install

@@ -16,6 +16,20 @@ hs.execute(
   [[]}']]
 )
 
+-- Logitech MX Keys S (Spanish ISO): same §/` swap as the built-in keyboard,
+-- plus Caps Lock -> Control so ControlEscape works there too. `hidutil --set`
+-- replaces the *entire* mapping for the device, so both remaps live in one call.
+-- Scoped by VendorID/ProductID (0x46d/0xb378). Note: on Bluetooth reconnect
+-- macOS reasserts the System Settings mapping (caps->ctrl only) and drops the
+-- swap until Hammerspoon reloads (alt+shift+r).
+hs.execute(
+  [[hidutil property --matching '{"VendorID":0x46d,"ProductID":0xb378}' --set '{"UserKeyMapping":[]] ..
+  [[{"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x7000000e4},]] ..
+  [[{"HIDKeyboardModifierMappingSrc":0x700000035,"HIDKeyboardModifierMappingDst":0x700000064},]] ..
+  [[{"HIDKeyboardModifierMappingSrc":0x700000064,"HIDKeyboardModifierMappingDst":0x700000035}]] ..
+  [[]}']]
+)
+
 hs.alert.show("Hammerspoon loaded 🤘")
 
 hs.hotkey.bind({ "alt", "shift" }, "r", function()

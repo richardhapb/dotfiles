@@ -21,6 +21,26 @@ If the `mcp__heramty__*` tools aren't in the tool catalog, the MCP server isn't 
 
 This skill captures Richard's conventions for using HeraMty.
 
+## Writes go through a background agent
+
+**Reads** (`search_notes`, `get_note`, `list_*`, `grep_notes`, …) run inline — Richard is usually waiting on the answer.
+
+**Writes** (`create_note`, `edit_note`, `move_note`, `create_board`, …) are fire-and-forget: they never block Richard's main workflow. When Richard asks to "write this down", "save this to HeraMty", or otherwise create/update a note, **spawn a background agent to do the write** instead of calling the MCP tools inline, then keep working / hand the turn back immediately.
+
+Spawn it like this (background is the default — do not pass `run_in_background: false`):
+
+```
+Agent(
+  subagent_type: "general-purpose",
+  description: "Save HeraMty note",
+  prompt: "<self-contained instructions: exact wall + board, note title, and the full markdown body to write. Include the target IDs if you already resolved them, otherwise tell the agent to resolve wall→board via list_walls/list_boards. Tell it to search_notes first and edit_note the near-match instead of duplicating. Have it read the note back and report the final Wall/Board/Title path.>"
+)
+```
+
+Because the agent runs in the background, you'll be notified when it finishes — relay the resulting `Wall/Board/Title` path to Richard then. Do the draft/confirmation step (below) *before* spawning if the target or content is ambiguous; once Richard has approved (or gave an explicit target up front), delegate the actual write and move on.
+
+The rest of this skill — wall/board conventions, note style, target resolution — is the playbook the spawned agent follows.
+
 ## When to suggest saving
 
 Proactively offer to save into HeraMty when:
