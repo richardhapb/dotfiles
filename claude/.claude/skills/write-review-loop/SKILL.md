@@ -26,7 +26,14 @@ Don't review every keystroke. A checkpoint is a **logical batch of work that is 
 - All edits for the batch are saved to disk.
 - Tests and lint pass locally for what you just touched (run them — a reviewer shouldn't be spending findings on a failing test you already know about).
 
-Only at a checkpoint do you launch (or re-launch) a reviewer. Between checkpoints, you keep coding; the reviewer is either idle or working on the *previous* snapshot.
+Only at a checkpoint do you launch (or re-launch) a reviewer. Between checkpoints, you keep coding; the reviewer works on the *previous* snapshot.
+
+**Checkpoint 0 — don't start with an idle reviewer.** At loop start, check whether the working tree already has reviewable changes (`git status`, diff against base):
+
+- **Tree already dirty** (the usual case — the loop is invoked on in-progress work): that state *is* the first checkpoint. Snapshot and launch the first reviewer immediately, then start writing the next batch. The reviewer works from minute zero instead of waiting for your first batch.
+- **Tree clean** (starting from scratch): do NOT spawn a reviewer yet — there is nothing to review and it would sit idle or report noise. Write the first batch; the first checkpoint launches the first reviewer.
+
+**At most one reviewer in flight.** If you reach a new checkpoint while a review is still running, don't launch a second one — overlapping snapshots produce duplicate findings and you'd triage the same issue twice. Keep coding; when the in-flight review returns, triage it, then snapshot the (now newer) state for the next reviewer.
 
 ## Snapshot
 
@@ -40,22 +47,30 @@ At a checkpoint, freeze the current state so the reviewer reads a stable thing e
    git -C <repo-abspath> --no-pager diff --cached >> /tmp/wrl-worktree-<n>.diff       # staged
    ```
 
-2. **An explicit list of untracked files** — these do NOT show up in `git diff` and are the most-missed part of a review:
+2. **Frozen copies of untracked files** — these do NOT show up in `git diff` and are the most-missed part of a review:
 
    ```bash
    git -C <repo-abspath> --no-pager status --short
    ```
 
-   Pull out the `??` entries and list their absolute paths in the snapshot so the reviewer reads each one in full.
+   Pull out the `??` entries and **copy each one into the snapshot directory**, preserving relative paths:
 
-A `git stash create` ref or a throwaway WIP commit also work as a frozen reference. The point is the reviewer reviews **that frozen reference**, so edits you make after the checkpoint can't corrupt the review in flight.
+   ```bash
+   mkdir -p /tmp/wrl-untracked-<n>
+   git -C <repo-abspath> ls-files --others --exclude-standard \
+     | rsync -aR --files-from=- <repo-abspath>/ /tmp/wrl-untracked-<n>/
+   ```
+
+   The reviewer reads the copies, not the live paths. Handing it live paths reintroduces failure mode #1 — you edit an untracked file three seconds after launch and the reviewer reads the newer state while reviewing the older diff.
+
+A `git stash create` ref or a throwaway WIP commit also work as a frozen reference (a WIP commit after `git add -A` has the advantage of freezing untracked files too). The point is the reviewer reviews **that frozen reference**, so edits you make after the checkpoint can't corrupt the review in flight.
 
 ## Launching the reviewer
 
 Use the Agent tool, `run_in_background: true`, `subagent_type: general-purpose` (or `Explore` for a strictly read-only pass). Give it:
 
 - The repo's **absolute path** and the snapshot file path(s).
-- The list of untracked-file absolute paths to read in full.
+- The untracked-file **copies** under the snapshot directory (path map: repo-relative path -> copy path) to read in full.
 - For a **re-review**, the prior findings and which ones you've addressed — so it *verifies the fixes* instead of re-reporting them — plus the **fresh** snapshot path.
 
 Prefer **one reviewer per checkpoint** over a single long-lived reviewer reading live files. A long-lived reviewer racing the working tree is exactly failure mode #1.
@@ -67,7 +82,7 @@ Prefer **one reviewer per checkpoint** over a single long-lived reviewer reading
 > - **Never use `cd`** — it triggers permission prompts. Use absolute paths and `git -C <repo-abspath> ...` for any git command.
 > - Always `git --no-pager`.
 > - If a read-only git or read command is blocked by the sandbox, **retry the same call with `dangerouslyDisableSandbox: true`** (safe for read-only git/reads). If Bash git is denied entirely, fall back to the **Read tool on the pre-written snapshot file** at `<snapshot-path>`.
-> - **Untracked new files do not appear in `git diff`.** Read each untracked file listed below in full: `<absolute paths>`.
+> - **Untracked new files do not appear in `git diff`.** Read each untracked-file snapshot copy listed below in full (these are frozen copies under `/tmp/wrl-untracked-<n>/`; the repo-relative path is given next to each): `<copy-path -> repo-relative-path>`. Do not read the live repo paths for these — they may have changed since the snapshot.
 > - Report findings grouped by severity: **Blocker / High / Medium / Low / Nit**. For each: `file:line`, what's wrong, and a concrete fix.
 > - End with a one-line **verdict**: `ship` / `fix-then-ship` / `needs-work`.
 > - **Do not ask the author questions** — they're not in the room. Form an opinion from the snapshot.
@@ -75,10 +90,15 @@ Prefer **one reviewer per checkpoint** over a single long-lived reviewer reading
 ## The loop
 
 ```
+loop start:
+  tree dirty?  -> that IS checkpoint 0: snapshot + launch reviewer now, start coding
+  tree clean?  -> no reviewer yet; code the first batch
+
 checkpoint reached (batch done, tests + lint pass locally)
-  -> capture snapshot (diff + untracked list)
-  -> launch background reviewer at the snapshot
-  -> keep coding the next batch  (or wait, if you're blocked on the review)
+  -> reviewer still in flight? keep coding; fold this checkpoint into the next review
+  -> otherwise: capture snapshot (diff + untracked copies)
+     -> launch background reviewer at the snapshot
+     -> keep coding the next batch  (or wait, if you're blocked on the review)
   -> reviewer completes -> triage findings:
         fix all High / Medium
         Low / Nit: optional, or defer with a note
@@ -87,11 +107,13 @@ checkpoint reached (batch done, tests + lint pass locally)
 repeat until verdict has no open High/Medium
 ```
 
-**Stop condition:** all High/Medium findings resolved (verdict `ship`, or `fix-then-ship` with only Low/Nit left). Low/Nit don't block the loop from ending.
+**Stop condition:** all High/Medium findings resolved (verdict `ship`, or `fix-then-ship` with only Low/Nit left). Low/Nit don't block the loop from ending. The verdict must come from a review of the snapshot that *includes* your last fixes — fixing the final High/Medium batch and stopping without a re-review isn't a clean exit.
 
 ## Anti-patterns
 
 - **Don't launch a reviewer mid-edit.** Reach a checkpoint first. A review of a half-written file is noise.
+- **Don't spawn a reviewer on a clean tree** "to have it ready" — it has nothing to review and just idles. Conversely, if the tree is already dirty at loop start, don't make the reviewer wait for your first batch — that existing state is checkpoint 0.
+- **Don't run two reviewers concurrently.** Overlapping snapshots double-report the same findings. One in flight, always.
 - **Don't reuse a stale snapshot.** Every re-review gets a fresh snapshot reflecting the latest fixes.
 - **Don't let the reviewer read live files.** It races your edits. Hand it a frozen snapshot.
 - **Don't forget untracked files.** They're invisible to `git diff` and are where the unreviewed code hides.

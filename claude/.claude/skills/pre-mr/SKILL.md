@@ -1,6 +1,6 @@
 ---
 name: pre-mr
-description: Pre-MR self-review of Richard's current branch — diff against master, surface what reviewers will catch, and ask Richard up to 3 targeted questions about intent and assumptions before reporting. Use when Richard says "review my branch", "pre-mr", "self-review", or otherwise asks for a review of his own in-progress work before opening the MR. Asks bounded clarifying questions — does NOT ask on 3rd-party MR reviews (use `mr-review` for those). Note: Check the origin to see if it is github or gitlab, if it is github: pr=mr
+description: Pre-MR self-review of Richard's current branch — diff against master, surface what reviewers will catch, and ask Richard up to 3 targeted questions about intent and assumptions before reporting. Use when Richard says "review my branch", "pre-mr", "self-review", or otherwise asks for a review of his own in-progress work before opening the MR. Asks bounded clarifying questions — does NOT ask on 3rd-party MR reviews (use `mr-review` for those). Host-agnostic: works the same on GitHub (pr) and GitLab (mr) repos.
 ---
 
 # Pre-MR self-review
@@ -22,13 +22,7 @@ BRANCH="$(git symbolic-ref refs/remotes/origin/HEAD | sed 's/.*\/origin\///')"
 echo "$BRANCH"
 ```
 
-Verify host
-
-```bash
-HOST="$(git remote show origin | grep Fetch | sed 's/Fetch URL: //')"
-echo $HOST | grep github 2>&1 > /dev/null && echo github || echo gitlab
-echo $HOST  # Double check
-```
+Don't bother detecting the host upfront — the review is local (git only). The host only matters for the optional open-MR check below; the remote URL tells you which CLI to use at that point.
 
 Update branch
 
@@ -49,7 +43,7 @@ If local is behind `origin`, mention it once in the report so Richard knows to r
 
 Also note:
 - Branch name (often encodes the ticket — e.g. `ESCR-1584`)
-- Whether there's an open MR already (`glab mr list --source-branch $(git branch --show-current)`) — if so, this is "review before requesting review", not "review before opening".
+- Whether there's an open MR/PR already — `glab mr list --source-branch $(git branch --show-current)` on GitLab, `gh pr list --head $(git branch --show-current)` on GitHub (pick by the remote URL). If so, this is "review before requesting review", not "review before opening".
 
 Read the full diff. For non-trivial files, also read the full file at HEAD — context outside the hunk is where bugs hide.
 
@@ -62,7 +56,7 @@ Read, in order of priority:
 - `CLAUDE.md` / `AGENTS.md` / `README.md` at repo root — explicit conventions if present.
 - The same files inside the touched directories — local conventions for that module.
 - **Adjacent code in the same directory** — naming, file layout, how similar features are wired in. The strongest signal is "how do existing features in this same folder do it?"
-- Recent merged MRs touching the same area (`glab mr list --state merged -P10`) for voice and density of past reviews.
+- Recent merged MRs/PRs touching the same area (`glab mr list --state merged -P10` / `gh pr list --state merged -L10`) for voice and density of past reviews.
 
 When the diff diverges from the local pattern, that's worth flagging — even if the new pattern is arguably better. Consistency is a property reviewers care about.
 
@@ -180,6 +174,8 @@ Severity-grouped, concrete, line-numbered:
 ```
 
 Skip empty sections. If Richard answered questions in step 4, weave the answers into the report so it's self-contained — don't make him re-derive context.
+
+If the verdict is "ready to MR" (and the repo is GitLab), offer one short line to chain into the `gitlab-mr` skill — the report already contains everything that skill needs to draft the description. Don't invoke it without a yes.
 
 ## Anti-patterns
 
