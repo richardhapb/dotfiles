@@ -1,6 +1,7 @@
 -- apps.lua — direct app focus/launch on alt+<key> (replaces AeroSpace workspaces).
--- Focus only: never moves, resizes, or tiles windows. Native macOS owns geometry,
--- including fullscreen Spaces (activating an app jumps to its Space).
+-- App bindings only focus/launch; native macOS owns geometry, including fullscreen
+-- Spaces (activating an app jumps to its Space). The one exception is alt+f, which
+-- maximizes the focused window to fill the screen frame (see bottom of file).
 --
 -- To add/remove an app, edit the APPS table below. A value can be:
 --   - a string:   app name for hs.application.launchOrFocus
@@ -198,6 +199,13 @@ appWatcher:start()
 
 hs.hotkey.bind({ "alt" }, "tab", function()
   if previousApp then hs.application.launchOrFocusByBundleID(previousApp) end
+end)
+
+-- alt+f maximizes the focused window to fill the screen frame (respecting the
+-- menu bar / Dock). Unlike native fullscreen, the window stays in its Space.
+hs.hotkey.bind({ "alt" }, "f", function()
+  local win = hs.window.focusedWindow()
+  if win then win:maximize() end
 end)
 
 -- Keep the watcher and window filter referenced via package.loaded so they

@@ -4,7 +4,7 @@ background-blur = 12
 foreground = dddddd
 font-size = 13
 
-window-decoration = true
+window-decoration = false
 macos-non-native-fullscreen = false
 
 keybind="alt+v=toggle_visibility"
