@@ -41,6 +41,9 @@ hs.window.animationDuration = 0
 -- App focus/launch bindings (alt+1..9, alt+letter, alt+tab) live in apps.lua.
 require("apps")
 
+-- alt+shift+tab: send the focused window/space to the next screen (screens.lua).
+require("screens")
+
 -- Recover all visible windows to center
 hs.hotkey.bind({ "alt", "cmd" }, "r", function()
   local screen = hs.screen.mainScreen()
