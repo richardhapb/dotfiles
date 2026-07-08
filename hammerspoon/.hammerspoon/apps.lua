@@ -173,6 +173,7 @@ local APPS = {
   ["a"] = "Granola",
   ["s"] = "Telegram",
   ["z"] = "zoom.us",
+  ["x"] = "HeraMty",
   ["p"] = focusDrawing,
 }
 
