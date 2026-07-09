@@ -58,7 +58,7 @@ notify_magno() {
 }
 
 remote_port_is_busy() {
-  ssh "$RPI_HOST" "ss -ltn | awk '{print \\$4}' | grep -Eq '(^|:|\\])${TCP_PORT}$'"
+  ssh "$RPI_HOST" "ss -ltn sport = :${TCP_PORT} | grep -q LISTEN"
 }
 
 cleanup() {
