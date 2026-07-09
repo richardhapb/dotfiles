@@ -1,84 +1,19 @@
 #!/usr/bin/env bash
-# just-draw-udp-tunnel
-#
-# Bring up the udp-over-tcp side needed for Just Draw UDP traffic.
-# - On Checkr Mac (MD3HKDVJW4): local udp-over-tcp listener + reverse SSH tunnel to RPi.
-# - On personal Mac (macbook.local): local udp-over-tcp listener only.
-#
-# This script intentionally does NOT run just_draw. Run that yourself:
-#   just_draw --udp --port 43555
-#
-# Optional env:
-#   JD_RPI_HOST=richard@rpi        SSH target for the Raspberry Pi tunnel
-#   JD_HERMES_HOST=rpic            SSH target that can run `hermes send`
-#   JD_HERMES_TARGET=telegram      Hermes send target
-#   JD_NO_NOTIFY=1                 Disable Hermes notifications
-#   JD_TCP_PORT=43554
-#   JD_LOCAL_APP_PORT=43555
-#   JD_REMOTE_REPLICA_PORT=43556
+
 set -euo pipefail
 
 RPI_HOST="${JD_RPI_HOST:-richard@rpi}"
-HERMES_HOST="${JD_HERMES_HOST:-rpic}"
-HERMES_TARGET="${JD_HERMES_TARGET:-telegram}"
 TCP_PORT="${JD_TCP_PORT:-43554}"
 LOCAL_APP_PORT="${JD_LOCAL_APP_PORT:-43555}"
 REMOTE_REPLICA_PORT="${JD_REMOTE_REPLICA_PORT:-43556}"
 
-HOSTNAME_FULL="$(hostname 2>/dev/null || true)"
-HOSTNAME_SHORT="$(hostname -s 2>/dev/null || printf '%s' "$HOSTNAME_FULL")"
-MODE="${1:-auto}"
+[[ "$HOSTNAME" != "MD3HKDVJW4" ]] && echo "Environment not supported" && exit 1
 
 ssh_pid=""
 udp_pid=""
 ssh_log=""
 pi_switched=0
 exiting=0
-
-usage() {
-  cat <<USAGE
-usage: just-draw-udp-tunnel [auto|checkr|personal]
-
-checkr   Start local udp-over-tcp + reverse SSH tunnel to the RPi.
-personal Start local udp-over-tcp only.
-auto     Infer from hostname: MD3HKDVJW4=checkr, macbook.local=personal.
-
-Then run manually in another terminal:
-  just_draw --udp --port ${LOCAL_APP_PORT}
-USAGE
-}
-
-notify_magno() {
-  [[ "${JD_NO_NOTIFY:-}" == "1" ]] && return 0
-  local subject="$1"
-  local body="$2"
-
-  ssh "$HERMES_HOST" \
-    hermes send --to "$HERMES_TARGET" --subject "$subject" "$body" \
-    >/dev/null 2>&1 || true
-}
-
-remote_port_is_busy() {
-  ssh "$RPI_HOST" "ss -ltn sport = :${TCP_PORT} | grep -q LISTEN"
-}
-
-clear_stale_remote_port() {
-  remote_port_is_busy || return 0
-
-  echo "RPi port ${TCP_PORT} is already listening; clearing stale reverse-forward..." >&2
-  ssh "$RPI_HOST" "sudo fuser -k ${TCP_PORT}/tcp >/dev/null 2>&1 || true"
-  sleep 0.5
-
-  if remote_port_is_busy; then
-    cat >&2 <<EOF
-RPi port ${TCP_PORT} is still listening after cleanup.
-On the Pi, inspect it with:
-  sudo ss -ltnp 'sport = :${TCP_PORT}'
-Then kill the owning process before rerunning.
-EOF
-    return 1
-  fi
-}
 
 switch_pi_to_checkr() {
   echo "Switching Pi sender to Checkr..." >&2
@@ -101,48 +36,15 @@ cleanup() {
   wait >/dev/null 2>&1 || true
   [[ -n "$ssh_log" ]] && rm -f "$ssh_log" >/dev/null 2>&1 || true
 
-  case "$MODE" in
-    checkr)
-      if [[ "$pi_switched" == "1" ]]; then
-        restore_pi_personal
-      fi
-      notify_magno \
-        "[just-draw] Checkr tunnel down" \
-        "Host ${HOSTNAME_FULL:-unknown} exited just-draw-udp-tunnel with status ${status}. Pi restore was attempted automatically: stop just-draw-checkr.service and start just-draw-pen.service."
-      ;;
-    personal)
-      notify_magno \
-        "[just-draw] Personal Mac listener down" \
-        "Host ${HOSTNAME_FULL:-unknown} exited just-draw-udp-tunnel with status ${status}. If Richard asks to switch away from personal mode, stop the normal Pi service or move to the requested host."
-      ;;
-  esac
+  if [[ "$pi_switched" == "1" ]]; then
+    restore_pi_personal
+  fi
 
   exit "$status"
 }
 trap cleanup EXIT INT TERM
 
-case "$MODE" in
-  -h|--help|help) usage; exit 0 ;;
-  auto)
-    case "$HOSTNAME_FULL:$HOSTNAME_SHORT" in
-      *MD3HKDVJW4*) MODE="checkr" ;;
-      *macbook.local*|macbook:*) MODE="personal" ;;
-      *)
-        echo "Cannot infer mode from hostname '${HOSTNAME_FULL}'. Use: just-draw-udp-tunnel checkr|personal" >&2
-        exit 2
-        ;;
-    esac
-    ;;
-  checkr|personal) ;;
-  *) usage >&2; exit 2 ;;
-esac
-
 command -v udp-over-tcp >/dev/null 2>&1 || { echo "udp-over-tcp not found in PATH" >&2; exit 127; }
-
-if [[ "$MODE" == "checkr" ]]; then
-  command -v ssh >/dev/null 2>&1 || { echo "ssh not found in PATH" >&2; exit 127; }
-  clear_stale_remote_port
-fi
 
 # Local side: Just Draw will talk UDP to 127.0.0.1:${REMOTE_REPLICA_PORT};
 # udp-over-tcp sends peer datagrams to Just Draw at 127.0.0.1:${LOCAL_APP_PORT}.
@@ -158,51 +60,34 @@ if ! kill -0 "$udp_pid" >/dev/null 2>&1; then
   exit 1
 fi
 
-if [[ "$MODE" == "checkr" ]]; then
-  ssh_log="${TMPDIR:-/tmp}/just-draw-udp-tunnel.ssh.$$.$RANDOM.log"
+ssh_log="${TMPDIR:-/tmp}/just-draw-udp-tunnel.ssh.$$.$RANDOM.log"
 
-  # Pi localhost:${TCP_PORT} -> this Mac localhost:${TCP_PORT}.
-  # This lets the Pi-side udp-over-tcp use --tcp-connect 127.0.0.1:${TCP_PORT}
-  # even when Checkr VPN blocks inbound connections to the Mac.
-  ssh -N \
-    -o ExitOnForwardFailure=yes \
-    -o ServerAliveInterval=30 \
-    -o ServerAliveCountMax=2 \
-    -R "127.0.0.1:${TCP_PORT}:127.0.0.1:${TCP_PORT}" \
-    "$RPI_HOST" >"$ssh_log" 2>&1 &
-  ssh_pid=$!
+# Pi localhost:${TCP_PORT} -> this Mac localhost:${TCP_PORT}.
+# This lets the Pi-side udp-over-tcp use --tcp-connect 127.0.0.1:${TCP_PORT}
+# even when Checkr VPN blocks inbound connections to the Mac.
+ssh -N \
+-o ExitOnForwardFailure=yes \
+-o ServerAliveInterval=30 \
+-o ServerAliveCountMax=2 \
+-R "127.0.0.1:${TCP_PORT}:127.0.0.1:${TCP_PORT}" \
+"$RPI_HOST" >"$ssh_log" 2>&1 &
+ssh_pid=$!
 
-  sleep 1
-  if grep -qi 'remote port forwarding failed\|remote forward failure' "$ssh_log" 2>/dev/null; then
-    cat "$ssh_log" >&2 || true
-    echo "ssh reverse tunnel failed: RPi port ${TCP_PORT} was not allocated" >&2
-    exit 1
-  fi
-  if ! kill -0 "$ssh_pid" >/dev/null 2>&1; then
-    cat "$ssh_log" >&2 || true
-    echo "ssh reverse tunnel failed to start" >&2
-    exit 1
-  fi
-  if ! remote_port_is_busy; then
-    cat "$ssh_log" >&2 || true
-    echo "ssh reverse tunnel failed: RPi port ${TCP_PORT} is not listening after startup" >&2
-    exit 1
-  fi
-
-  switch_pi_to_checkr
-
-  notify_magno \
-    "[just-draw] Checkr tunnel up" \
-    "Host ${HOSTNAME_FULL:-unknown} has local udp-over-tcp listening on ${TCP_PORT}, reverse SSH tunnel is up, and Pi services were switched automatically: just-draw-pen.service stopped; just-draw-checkr.service started. Do not start just_draw; Richard runs it manually."
-
-  echo "Checkr tunnel up; Pi sender switched to Checkr. Now run manually: just_draw --udp --port ${LOCAL_APP_PORT}"
-else
-  notify_magno \
-    "[just-draw] Personal Mac listener up" \
-    "Host ${HOSTNAME_FULL:-unknown} has local udp-over-tcp listening on ${TCP_PORT}. Start/keep the normal Pi service that targets macbook.local/personal Mac. Do not start just_draw; Richard runs it manually."
-
-  echo "Personal Mac listener up. Now run manually: just_draw --udp --port ${LOCAL_APP_PORT}"
+sleep 1
+if grep -qi 'remote port forwarding failed\|remote forward failure' "$ssh_log" 2>/dev/null; then
+cat "$ssh_log" >&2 || true
+echo "ssh reverse tunnel failed: RPi port ${TCP_PORT} was not allocated" >&2
+exit 1
 fi
+if ! kill -0 "$ssh_pid" >/dev/null 2>&1; then
+cat "$ssh_log" >&2 || true
+echo "ssh reverse tunnel failed to start" >&2
+exit 1
+fi
+
+switch_pi_to_checkr
+
+echo "Checkr tunnel up; Pi sender switched to Checkr. Now run manually: just_draw --udp --port ${LOCAL_APP_PORT}"
 
 # Portable replacement for Bash 4+'s wait -n (macOS ships Bash 3.2 by default).
 while true; do
