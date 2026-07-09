@@ -9,7 +9,8 @@
 #   just_draw --udp --port 43555
 #
 # Optional env:
-#   JD_RPI_HOST=richard@rpi        SSH target for the Raspberry Pi
+#   JD_RPI_HOST=richard@rpi        SSH target for the Raspberry Pi tunnel
+#   JD_HERMES_HOST=rpic            SSH target that can run `hermes send`
 #   JD_HERMES_TARGET=telegram      Hermes send target
 #   JD_NO_NOTIFY=1                 Disable Hermes notifications
 #   JD_TCP_PORT=43554
@@ -18,6 +19,7 @@
 set -euo pipefail
 
 RPI_HOST="${JD_RPI_HOST:-richard@rpi}"
+HERMES_HOST="${JD_HERMES_HOST:-rpic}"
 HERMES_TARGET="${JD_HERMES_TARGET:-telegram}"
 TCP_PORT="${JD_TCP_PORT:-43554}"
 LOCAL_APP_PORT="${JD_LOCAL_APP_PORT:-43555}"
@@ -29,6 +31,7 @@ MODE="${1:-auto}"
 
 ssh_pid=""
 udp_pid=""
+ssh_log=""
 exiting=0
 
 usage() {
@@ -49,11 +52,13 @@ notify_magno() {
   local subject="$1"
   local body="$2"
 
-  if command -v hermes >/dev/null 2>&1; then
-    hermes send --to "$HERMES_TARGET" --subject "$subject" "$body" >/dev/null 2>&1 || true
-  else
-    printf '[notify skipped: hermes not found] %s\n%s\n' "$subject" "$body" >&2
-  fi
+  ssh "$HERMES_HOST" \
+    hermes send --to "$HERMES_TARGET" --subject "$subject" "$body" \
+    >/dev/null 2>&1 || true
+}
+
+remote_port_is_busy() {
+  ssh "$RPI_HOST" "ss -ltn | awk '{print \\$4}' | grep -Eq '(^|:|\\])${TCP_PORT}$'"
 }
 
 cleanup() {
@@ -64,6 +69,7 @@ cleanup() {
   [[ -n "$udp_pid" ]] && kill "$udp_pid" >/dev/null 2>&1 || true
   [[ -n "$ssh_pid" ]] && kill "$ssh_pid" >/dev/null 2>&1 || true
   wait >/dev/null 2>&1 || true
+  [[ -n "$ssh_log" ]] && rm -f "$ssh_log" >/dev/null 2>&1 || true
 
   case "$MODE" in
     checkr)
@@ -100,6 +106,21 @@ esac
 
 command -v udp-over-tcp >/dev/null 2>&1 || { echo "udp-over-tcp not found in PATH" >&2; exit 127; }
 
+if [[ "$MODE" == "checkr" ]]; then
+  command -v ssh >/dev/null 2>&1 || { echo "ssh not found in PATH" >&2; exit 127; }
+
+  if remote_port_is_busy; then
+    cat >&2 <<EOF
+RPi port ${TCP_PORT} is already listening, so ssh -R would fail.
+Clear the stale tunnel/workaround first, for example from the Pi user that owns it:
+  pkill -f 'udp-over-tcp --tcp-connect.*${TCP_PORT}'
+  pkill -f 'pi_sender 127.0.0.1 ${LOCAL_APP_PORT}'
+Then rerun: just-draw-udp-tunnel checkr
+EOF
+    exit 1
+  fi
+fi
+
 # Local side: Just Draw will talk UDP to 127.0.0.1:${REMOTE_REPLICA_PORT};
 # udp-over-tcp sends peer datagrams to Just Draw at 127.0.0.1:${LOCAL_APP_PORT}.
 udp-over-tcp \
@@ -115,7 +136,7 @@ if ! kill -0 "$udp_pid" >/dev/null 2>&1; then
 fi
 
 if [[ "$MODE" == "checkr" ]]; then
-  command -v ssh >/dev/null 2>&1 || { echo "ssh not found in PATH" >&2; exit 127; }
+  ssh_log="${TMPDIR:-/tmp}/just-draw-udp-tunnel.ssh.$$.$RANDOM.log"
 
   # Pi localhost:${TCP_PORT} -> this Mac localhost:${TCP_PORT}.
   # This lets the Pi-side udp-over-tcp use --tcp-connect 127.0.0.1:${TCP_PORT}
@@ -125,11 +146,17 @@ if [[ "$MODE" == "checkr" ]]; then
     -o ServerAliveInterval=30 \
     -o ServerAliveCountMax=2 \
     -R "127.0.0.1:${TCP_PORT}:127.0.0.1:${TCP_PORT}" \
-    "$RPI_HOST" &
+    "$RPI_HOST" >"$ssh_log" 2>&1 &
   ssh_pid=$!
 
-  sleep 0.5
+  sleep 1
+  if grep -qi 'remote port forwarding failed\|remote forward failure' "$ssh_log" 2>/dev/null; then
+    cat "$ssh_log" >&2 || true
+    echo "ssh reverse tunnel failed: RPi port ${TCP_PORT} was not allocated" >&2
+    exit 1
+  fi
   if ! kill -0 "$ssh_pid" >/dev/null 2>&1; then
+    cat "$ssh_log" >&2 || true
     echo "ssh reverse tunnel failed to start" >&2
     exit 1
   fi
