@@ -25,7 +25,7 @@ This skill captures Richard's conventions for using HeraMty.
 
 **Reads** (`search_notes`, `get_note`, `list_*`, `grep_notes`, …) run inline — Richard is usually waiting on the answer.
 
-**Writes** (`create_note`, `edit_note`, `move_note`, `create_board`, …) are fire-and-forget: they never block Richard's main workflow. When Richard asks to "write this down", "save this to HeraMty", or otherwise create/update a note, **spawn a background agent to do the write** instead of calling the MCP tools inline, then keep working / hand the turn back immediately.
+**Writes** (`create_note`, `append_note`, `edit_note`, `move_note`, `create_board`, …) are fire-and-forget: they never block Richard's main workflow. When Richard asks to "write this down", "save this to HeraMty", or otherwise create/update a note, **spawn a background agent to do the write** instead of calling the MCP tools inline, then keep working / hand the turn back immediately.
 
 Spawn it like this (background is the default — do not pass `run_in_background: false`):
 
@@ -144,7 +144,8 @@ Cache the IDs in the conversation; don't relist on every call.
 Content is passed directly as a string argument — no `--file` plumbing, no positional-argument gotchas:
 
 - **Create:** `create_note(board_id, title, content)`.
-- **Update:** `edit_note(id, title, content)` — replaces title + full content; optimistic locking is handled for you.
+- **Append:** `append_note(id, content, section?)` — add markdown to an existing note *without* resending the whole body. Preserves the title and everything already there; with `section` it appends under a `## <section>` heading (created at the end if absent). **Prefer this over `edit_note` whenever you're only adding to a note** (a new dated section, another bullet, a summary at the bottom): it skips the read-everything-then-resend step and removes the risk of clobbering existing content on a bad round-trip.
+- **Update:** `edit_note(id, title, content)` — replaces title + full content; optimistic locking is handled for you. Use when you must rewrite the title or restructure/replace existing content — not for a plain add (use `append_note`).
 - **Rename only:** `rename_note(id, title)` (content unchanged).
 - **Move:** `move_note(id, board_id)`; `move_board(id, wall_id)`.
 - **Delete:** `delete_note(id)` (soft delete); `delete_board(id)` (cascades to its notes — confirm first).
@@ -185,6 +186,7 @@ The HeraMty MCP server (`mcp__heramty__*`) exposes the full surface:
 | `create_wall`   | `name` | create a wall |
 | `create_board`  | `wall_id`, `name` | create a board |
 | `create_note`   | `board_id`, `title`, `content` | create a note |
+| `append_note`   | `id`, `content`, `section?` | append markdown to a note (optionally under a `## section`) without resending the body |
 | `edit_note`     | `id`, `title`, `content` | replace a note's title + full content |
 | `rename_note`   | `id`, `title` | rename a note (content unchanged) |
 | `move_note`     | `id`, `board_id` | move a note to another board |
