@@ -32,6 +32,7 @@ MODE="${1:-auto}"
 ssh_pid=""
 udp_pid=""
 ssh_log=""
+pi_switched=0
 exiting=0
 
 usage() {
@@ -61,6 +62,35 @@ remote_port_is_busy() {
   ssh "$RPI_HOST" "ss -ltn sport = :${TCP_PORT} | grep -q LISTEN"
 }
 
+clear_stale_remote_port() {
+  remote_port_is_busy || return 0
+
+  echo "RPi port ${TCP_PORT} is already listening; clearing stale reverse-forward..." >&2
+  ssh "$RPI_HOST" "sudo fuser -k ${TCP_PORT}/tcp >/dev/null 2>&1 || true"
+  sleep 0.5
+
+  if remote_port_is_busy; then
+    cat >&2 <<EOF
+RPi port ${TCP_PORT} is still listening after cleanup.
+On the Pi, inspect it with:
+  sudo ss -ltnp 'sport = :${TCP_PORT}'
+Then kill the owning process before rerunning.
+EOF
+    return 1
+  fi
+}
+
+switch_pi_to_checkr() {
+  echo "Switching Pi sender to Checkr..." >&2
+  ssh "$RPI_HOST" "sudo systemctl stop just-draw-pen.service && sudo systemctl start just-draw-checkr.service && sudo systemctl --no-pager --plain status just-draw-checkr.service >/dev/null"
+  pi_switched=1
+}
+
+restore_pi_personal() {
+  echo "Restoring Pi sender to personal Mac..." >&2
+  ssh "$RPI_HOST" "sudo systemctl stop just-draw-checkr.service; sudo systemctl start just-draw-pen.service" >/dev/null 2>&1 || true
+}
+
 cleanup() {
   local status=$?
   [[ "$exiting" == "1" ]] && exit "$status"
@@ -73,9 +103,12 @@ cleanup() {
 
   case "$MODE" in
     checkr)
+      if [[ "$pi_switched" == "1" ]]; then
+        restore_pi_personal
+      fi
       notify_magno \
         "[just-draw] Checkr tunnel down" \
-        "Host ${HOSTNAME_FULL:-unknown} exited just-draw-udp-tunnel with status ${status}. Restore personal Mac setup: stop the Pi-side Checkr workaround and start the normal Pi service targeting macbook.local / personal Mac. Do not start just_draw; Richard runs it manually."
+        "Host ${HOSTNAME_FULL:-unknown} exited just-draw-udp-tunnel with status ${status}. Pi restore was attempted automatically: stop just-draw-checkr.service and start just-draw-pen.service."
       ;;
     personal)
       notify_magno \
@@ -108,17 +141,7 @@ command -v udp-over-tcp >/dev/null 2>&1 || { echo "udp-over-tcp not found in PAT
 
 if [[ "$MODE" == "checkr" ]]; then
   command -v ssh >/dev/null 2>&1 || { echo "ssh not found in PATH" >&2; exit 127; }
-
-  if remote_port_is_busy; then
-    cat >&2 <<EOF
-RPi port ${TCP_PORT} is already listening, so ssh -R would fail.
-Clear the stale tunnel/workaround first, for example from the Pi user that owns it:
-  pkill -f 'udp-over-tcp --tcp-connect.*${TCP_PORT}'
-  pkill -f 'pi_sender 127.0.0.1 ${LOCAL_APP_PORT}'
-Then rerun: just-draw-udp-tunnel checkr
-EOF
-    exit 1
-  fi
+  clear_stale_remote_port
 fi
 
 # Local side: Just Draw will talk UDP to 127.0.0.1:${REMOTE_REPLICA_PORT};
@@ -166,11 +189,13 @@ if [[ "$MODE" == "checkr" ]]; then
     exit 1
   fi
 
+  switch_pi_to_checkr
+
   notify_magno \
     "[just-draw] Checkr tunnel up" \
-    "Host ${HOSTNAME_FULL:-unknown} has local udp-over-tcp listening on ${TCP_PORT} and reverse SSH tunnel ${RPI_HOST}:127.0.0.1:${TCP_PORT} -> this Mac:127.0.0.1:${TCP_PORT}. Stop the normal Pi service that targets macbook.local/personal Mac, then start the Pi-side Checkr workaround: udp-over-tcp --tcp-connect 127.0.0.1:${TCP_PORT} --udp-bind 127.0.0.1:${LOCAL_APP_PORT} --udp-sendto 127.0.0.1:${REMOTE_REPLICA_PORT}; then run /home/richard/dev/just-draw/zig-out/bin/pi_sender 127.0.0.1 ${LOCAL_APP_PORT}. Do not start just_draw; Richard runs it manually."
+    "Host ${HOSTNAME_FULL:-unknown} has local udp-over-tcp listening on ${TCP_PORT}, reverse SSH tunnel is up, and Pi services were switched automatically: just-draw-pen.service stopped; just-draw-checkr.service started. Do not start just_draw; Richard runs it manually."
 
-  echo "Checkr tunnel up. Now run manually: just_draw --udp --port ${LOCAL_APP_PORT}"
+  echo "Checkr tunnel up; Pi sender switched to Checkr. Now run manually: just_draw --udp --port ${LOCAL_APP_PORT}"
 else
   notify_magno \
     "[just-draw] Personal Mac listener up" \
