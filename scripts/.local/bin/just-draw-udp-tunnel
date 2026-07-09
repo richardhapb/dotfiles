@@ -160,6 +160,11 @@ if [[ "$MODE" == "checkr" ]]; then
     echo "ssh reverse tunnel failed to start" >&2
     exit 1
   fi
+  if ! remote_port_is_busy; then
+    cat "$ssh_log" >&2 || true
+    echo "ssh reverse tunnel failed: RPi port ${TCP_PORT} is not listening after startup" >&2
+    exit 1
+  fi
 
   notify_magno \
     "[just-draw] Checkr tunnel up" \
@@ -177,10 +182,13 @@ fi
 # Portable replacement for Bash 4+'s wait -n (macOS ships Bash 3.2 by default).
 while true; do
   if ! kill -0 "$udp_pid" >/dev/null 2>&1; then
+    echo "udp-over-tcp listener exited" >&2
     wait "$udp_pid" || exit $?
     exit 0
   fi
   if [[ -n "$ssh_pid" ]] && ! kill -0 "$ssh_pid" >/dev/null 2>&1; then
+    cat "$ssh_log" >&2 || true
+    echo "ssh reverse tunnel exited" >&2
     wait "$ssh_pid" || exit $?
     exit 0
   fi
