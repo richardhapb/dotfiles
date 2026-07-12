@@ -141,6 +141,7 @@ alias gf='git fetch'
 alias gm='git merge'
 
 alias rr=gqrx  # I never remember this name  -- rr because "Radio"
+alias c=claude
 
 
 alias lr='ln -sf $(pwd)/target/release/$(dirname $(pwd)) ~/.local/bin'
