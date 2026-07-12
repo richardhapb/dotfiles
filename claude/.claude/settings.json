@@ -4,13 +4,6 @@
       "mcp__honcho",
       "Bash(cd *)",
       "Bash(hmt *)"
-    ],
-    "ask": [
-      "Bash(git push:*)",
-      "Bash(gh pr create:*)",
-      "Bash(rtk gh pr create:*)",
-      "Bash(glab mr create:*)",
-      "Bash(rtk glab mr create:*)"
     ]
   },
   "model": "claude-fable-5[1m]",
@@ -54,11 +47,6 @@
           {
             "type": "command",
             "command": "$HOME/.tmux/plugins/tmux-claude-session-manager/scripts/state.sh waiting"
-          },
-          {
-            "type": "command",
-            "command": "jq -r \".tool_input.command\" | grep -qE \"git[[:space:]]+push([[:space:]]|$).*(--force|--force-with-lease|(^|[[:space:]])-f([[:space:]]|$))\" && printf '%s' \"{\\\"hookSpecificOutput\\\":{\\\"hookEventName\\\":\\\"PreToolUse\\\",\\\"permissionDecision\\\":\\\"deny\\\",\\\"permissionDecisionReason\\\":\\\"Force-push is reserved for Richard. Finish all prep (commit, rebase, fetch, verify the lease), then STOP and ask him to run the force-push himself; do not run it.\\\"}}\" || true",
-            "statusMessage": "Checking for force-push"
           }
         ]
       },
@@ -68,6 +56,11 @@
           {
             "type": "command",
             "command": "rtk hook claude"
+          },
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/git-push-guard.sh",
+            "statusMessage": "Checking repo ownership for push"
           }
         ]
       }
