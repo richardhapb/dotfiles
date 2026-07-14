@@ -174,6 +174,7 @@ local APPS = {
   ["s"] = "Telegram",
   ["z"] = "zoom.us",
   ["x"] = "HeraMty",
+  ["d"] = "Preview",
   ["p"] = focusDrawing,
 }
 
