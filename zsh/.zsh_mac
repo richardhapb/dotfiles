@@ -76,6 +76,16 @@ export SNVIM="$DEV/cont/neovim"
 export BOOKS="$HOME/Documents/Books"
 export PATH="/opt/homebrew/bin:$PATH"
 
+# Raspberry PI cross compiling from MacOS
+#
+# __Install toolchain:__
+#
+# rustup target add aarch64-unknown-linux-gnu
+# brew tap messense/macos-cross-toolchains
+# brew trust messense/macos-cross-toolchains
+# brew install aarch64-unknown-linux-gnu
+export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+
 # The following lines have been added by Docker Desktop to enable Docker CLI completions.
 fpath=(/Users/richard.penabonifaz/.docker/completions $fpath)
 autoload -Uz compinit
