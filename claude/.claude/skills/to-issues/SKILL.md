@@ -7,6 +7,8 @@ description: Break a plan, spec, or PRD into independently-grabbable GitHub issu
 
 Break a plan into independently-grabbable GitHub issues using vertical slices (tracer bullets).
 
+**Voice:** issue titles and bodies are published under Richard's name -- follow the `richard-tone` skill for their prose.
+
 ## Process
 
 ### 1. Gather context
