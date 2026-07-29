@@ -336,5 +336,5 @@ export PATH="$PATH:$ZVM_INSTALL/"
 # >>> grok installer >>>
 export PATH="$HOME/.grok/bin:$PATH"
 fpath=(~/.grok/completions/zsh $fpath)
-autoload -Uz compinit && compinit -C
+# compinit moved to the end of .zshrc so it runs once, after all fpath additions.
 # <<< grok installer <<<

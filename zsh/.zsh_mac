@@ -15,12 +15,14 @@ export IN="$HOME/Documents/Brain/Inbox"
 export DEV0="$HOME/Documents/Developer"
 export DEV="$HOME/proj"
 export NOTES="$HOME/notes"
-source $(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-source $(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+# Use $HOMEBREW_PREFIX (set by `brew shellenv` above) instead of `brew --prefix`;
+# each of those was a ~25ms subshell on every shell start.
+source $HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+source $HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh
 
-export JAVA_HOME=$(brew --prefix java)
+export JAVA_HOME=$HOMEBREW_PREFIX/opt/openjdk
 export PATH=$JAVA_HOME/bin:$PATH
-export SPARK_HOME=$(brew --prefix apache-spark)/libexec
+export SPARK_HOME=$HOMEBREW_PREFIX/opt/apache-spark/libexec
 export PATH=$SPARK_HOME/bin:$PATH
 export PATH=$HOME/.cargo/env:$PATH
 export PATH=$PATH:"$HOME/texpresso/build"
@@ -87,8 +89,8 @@ export PATH="/opt/homebrew/bin:$PATH"
 export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
 
 # The following lines have been added by Docker Desktop to enable Docker CLI completions.
-fpath=(/Users/richard.penabonifaz/.docker/completions $fpath)
-autoload -Uz compinit
-compinit
+# compinit is deliberately NOT called here -- .zshrc runs it once at the end,
+# after every fpath addition. Calling it twice cost ~300ms per shell.
+fpath=($HOME/.docker/completions $fpath)
 # End of Docker CLI completions
 #
