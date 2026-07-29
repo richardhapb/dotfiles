@@ -6,7 +6,6 @@
       "Bash(hmt *)"
     ]
   },
-  "model": "fable",
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -99,5 +98,6 @@
   "effortLevel": "medium",
   "tui": "fullscreen",
   "theme": "dark-daltonized",
-  "editorMode": "vim"
+  "editorMode": "vim",
+  "model": "opus[1m]"
 }

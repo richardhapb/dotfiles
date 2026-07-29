@@ -295,7 +295,7 @@ export NVIM_LOG_FILE=/tmp/nvim.log
 
 . "$HOME/.cargo/env"
 
-[[ $(command -v zoxide 2>&1 /dev/null) ]] && eval "$(zoxide init zsh)"
+command -v zoxide >/dev/null && eval "$(zoxide init zsh)"
 
 export LUA_PATH="./?.lua;/usr/local/share/lua/5.4/?.lua;$HOME/.luarocks/share/lua/5.4/?.lua;;"
 export LUA_CPATH="./?.so;/usr/local/lib/lua/5.4/?.so;$HOME/.luarocks/lib/lua/5.4/?.so;;"
@@ -326,7 +326,7 @@ export PATH="$BUN_INSTALL/bin:$PATH"
 export PATH="$HOME/.opencode/bin:$PATH"
 
 # Worktrunk
-if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init zsh)"; fi
+command -v wt >/dev/null && eval "$(command wt config shell init zsh)"
 
 # ZVM
 export ZVM_INSTALL="$HOME/.zvm/self"
