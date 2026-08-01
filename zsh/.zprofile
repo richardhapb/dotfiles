@@ -281,6 +281,31 @@ fbr() {
   git checkout $(echo "$branch" | sed "s/.* //" | sed "s#remotes/[^/]*/##")
 }
 
+# Parse claude pass conversation
+cc-rg() {
+    for a in $@; do
+        if [ $a = '-n' ]; then
+            local nflag="$a"
+            continue
+        fi
+        local pattern="$a"
+    done
+
+
+    if [ -z "$pattern" ]; then
+        echo "Pattern required"
+        return
+    fi
+
+    if [ $nflag = '-n' ]; then
+        rg -Nl "$pattern" | wc -l | sed 's/\s*//'
+        return
+    fi
+
+    rg -N "$pattern" | sed 's/.*\.jsonl://' | jq 2> /dev/null
+
+}
+
 
 bindkey -s ^f "tmux-sessionizer\n"
 

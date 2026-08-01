@@ -6,6 +6,7 @@
       "Bash(hmt *)"
     ]
   },
+  "model": "opus",
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -95,9 +96,8 @@
     "gopls-lsp@claude-plugins-official": true,
     "frontend-design@claude-plugins-official": true
   },
-  "effortLevel": "medium",
+  "effortLevel": "high",
   "tui": "fullscreen",
   "theme": "dark-daltonized",
-  "editorMode": "vim",
-  "model": "opus[1m]"
+  "editorMode": "vim"
 }
