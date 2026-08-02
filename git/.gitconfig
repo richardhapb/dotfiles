@@ -9,8 +9,9 @@
     tool = nvimdiff
 [difftool]
     prompt = false
+    trustExitCode = true
 [difftool "nvimdiff"]
-    cmd = "nvim -d -u ~/dotfiles/min-vim/.vimrc \"$LOCAL\" \"$REMOTE\""
+    cmd = "nvim -d \"$LOCAL\" \"$REMOTE\""
 [push]
     default = current
 [submodule]

@@ -101,7 +101,6 @@ fi
 
 source "$CACHE_FILE"
 
-alias dd="cd $DEV"
 alias cdd='cd ~/dev'
 alias va="source .venv/bin/activate"
 alias ls="ls -G"
