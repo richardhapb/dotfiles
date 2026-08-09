@@ -148,7 +148,7 @@ alias ld='ln -sf $(pwd)/target/debug/$(dirname $(pwd)) ~/.local/bin'
 
 esp() {
   source "$HOME/export-esp.sh"
-  source "$DEV/esp/export.sh"
+  source "$DEV/cont/esp-idf/export.sh"
 }
 
 alias h='eval $(history 0 | sort -r | sed -E "s/\s*[0-9]+\s+//" | uniq | fzf)'
