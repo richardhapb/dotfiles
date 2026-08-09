@@ -175,6 +175,7 @@ local APPS = {
   ["z"] = "zoom.us",
   ["x"] = "HeraMty",
   ["d"] = "Preview",
+  ["/"] = "Notes",
   ["p"] = focusDrawing,
 }
 
