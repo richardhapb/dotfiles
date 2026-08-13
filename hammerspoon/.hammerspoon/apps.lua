@@ -176,6 +176,7 @@ local APPS = {
   ["x"] = "HeraMty",
   ["d"] = "Preview",
   ["/"] = "Notes",
+  ["0"] = "Reminders",
   ["p"] = focusDrawing,
 }
 
