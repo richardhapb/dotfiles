@@ -155,7 +155,6 @@ alias h='eval $(history 0 | sort -r | sed -E "s/\s*[0-9]+\s+//" | uniq | fzf)'
 alias v="NVIM_LSP_ENABLED=1 nvim"
 alias vw="NVIM_LSP_ENABLED=0 nvim"
 alias f='fd --type f --strip-cwd-prefix --hidden --follow --exclude .git | fzf --preview "bat --style=numbers --color=always --line-range :500 {}" | xargs -r nvim'
-d() { local dir=$(fd --type d --strip-cwd-prefix --hidden --follow --exclude .git | fzf --preview "ls -lhAG {}"); [ -n "$dir" ] && cd "$dir" }
 alias dl='docker ps -a --format "{{.State}} | {{.Names}}" | fzf --preview "docker logs -n 100 {+3} -f" --preview-window "right:50%:wrap:follow" | awk -F"|" "{print \$2}" | xargs -r docker logs -n 1000 -f'
 dt() { container=$(docker ps --format "{{.Names}}" | fzf --preview "docker logs -n 100 {} -f" --preview-window "right:50%:wrap:follow") && [ -n "$container" ] && docker exec -it "$container" bash; }
 dx() {
