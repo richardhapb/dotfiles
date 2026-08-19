@@ -21,3 +21,5 @@
 - Don't use em-dash, it is weird, use double dash (--) instead or just use one.
 - Don't over estimate time for a project / implementation, thing the long-term changes as possible, since we work together and things get done faster.
 - Never merge automatically: these changes could break something, so they need review before merge.
+- NO over-comment methods or modules, keep just the important information of the implementation, no bullshit. Don't create a documentation inside the source code.
+- Don't reference people in MR/PR descriptions or messages, always we speak about the idea, no the people. No reference threads in MR / PR descriptions.
