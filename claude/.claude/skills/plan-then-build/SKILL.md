@@ -24,7 +24,7 @@ Before handing off, write the finished plan to disk. Treat it like briefing a fr
 
 Pick a durable location:
 - If the project already has a place for plans/design docs (check `CLAUDE.md`, an `orch_docs/`-style dir, or ask), use that.
-- Otherwise default to `plans/<slug>.md` in the repo, or ask the user where they want it if the repo has no convention.
+- Otherwise default to `/tmp/plans/<dirname>/<slug>.md`.
 
 Don't use the session scratchpad for this -- it's ephemeral and won't survive into a new session.
 

@@ -140,7 +140,8 @@ alias gf='git fetch'
 alias gm='git merge'
 
 alias rr=gqrx  # I never remember this name  -- rr because "Radio"
-alias c=claude
+alias c='claude --enable-auto-mode'
+alias k=kubectl
 
 
 alias lr='ln -sf $(pwd)/target/release/$(dirname $(pwd)) ~/.local/bin'
@@ -361,3 +362,8 @@ export PATH="$HOME/.grok/bin:$PATH"
 fpath=(~/.grok/completions/zsh $fpath)
 # compinit moved to the end of .zshrc so it runs once, after all fpath additions.
 # <<< grok installer <<<
+
+# sourced here since .zprofile is sourced by non-interactive zsh, if this is in .zshrc, no
+# os-specific file is sourced.
+. "$HOME/.zsh_os"
+

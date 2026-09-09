@@ -6,7 +6,7 @@
       "Bash(hmt *)"
     ]
   },
-  "model": "opus",
+  "model": "sonnet",
   "hooks": {
     "UserPromptSubmit": [
       {

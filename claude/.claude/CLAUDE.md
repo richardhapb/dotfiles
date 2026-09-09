@@ -18,6 +18,7 @@
 - Don't inclue Claude co-authored footer
 - Don't inclue ticket or issues references in test case descriptions. In comments, when it is strictly necessary provide that context.
 - Don't include references to tickets / issues in commits, it should be included in the PR / MR instead.
+- Don't include references in MR/PR to temporary design documents, conversations, internal references, or something the reviewer doesn't care about or doesn't have access to.
 - Don't use em-dash, it is weird, use double dash (--) instead or just use one.
 - Don't over estimate time for a project / implementation, thing the long-term changes as possible, since we work together and things get done faster.
 - Never merge automatically: these changes could break something, so they need review before merge.
