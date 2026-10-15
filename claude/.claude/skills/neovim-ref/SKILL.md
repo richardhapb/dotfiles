@@ -25,7 +25,7 @@ grep -nF "get '/things/:id' do" path/to/routes.rb | cut -d: -f1
 
 use whatever you need to get references of the code using this pattern.
 
-**2. Write the quickfix file to a scratch dir**, never into a repo. One line per reference:
+**2. Save the quickfix file to `~/notes/e2e/<name>.qf`** (honor `$SAPERE_ROOT` if set), never into a repo. It stays reusable: `nvim -c 'set errorformat=%f:%l:%m' -c 'cfile <file>' -c copen` reopens it later. Name it after the question it answers, in snake_case, e.g. `verify_task_setting_resolution.qf`, never `refs.qf` or `tmp.qf`. If a file with that name exists, `Read` it and update it rather than creating a second one. One line per reference:
 
 ```
 <abs path>:<line>: [tag] symbol -- why this one matters
@@ -46,7 +46,7 @@ The `[tag]` is what makes the list readable as an argument rather than a pile of
 tmux split-window -h -t <session> -c "<repo dir>"
 sleep 1
 tmux send-keys -t <session> "nvim -c 'set errorformat=%f:%l:%m' \
-  -c 'cfile <refs.qf>' -c 'copen 10'" Enter
+  -c 'cfile ~/notes/e2e/<name>.qf' -c 'copen 10'" Enter
 sleep 3
 ```
 
@@ -77,6 +77,7 @@ Do not generate a ctags file. It is the wrong tool and needs regenerating. Quick
 - **The same file twice is a feature.** Two functions as adjacent entries is what makes a "this path carries all the traffic, that one is dead" claim checkable at a glance.
 - **Summarise the mapping back in chat** as a small table (entry, location, why), so they can decide what to read without switching windows.
 - Tell them the keys once: `:copen`, `]q` / `[q`, `<CR>`.
+- Report the saved path (`~/notes/e2e/<name>.qf`) in the summary.
 
 ## Gotchas
 

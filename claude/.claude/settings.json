@@ -17,6 +17,16 @@
             "command": "$HOME/.tmux/plugins/tmux-claude-session-manager/scripts/state.sh working"
           }
         ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.local/share/ripwire/hooks/ripwire-claude-route.sh",
+            "timeout": 8
+          }
+        ]
       }
     ],
     "Notification": [
@@ -63,6 +73,15 @@
             "statusMessage": "Checking repo ownership for push"
           }
         ]
+      },
+      {
+        "matcher": "^(Read|Glob|Grep|Bash|Edit|Write|MultiEdit|NotebookEdit|mcp__ripwire__.*)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.local/share/ripwire/hooks/ripwire-nudge.sh"
+          }
+        ]
       }
     ],
     "Stop": [
@@ -77,6 +96,17 @@
             "type": "command",
             "command": "$HOME/.local/bin/claude-notify 'Claude finished' Glass",
             "async": true
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.local/share/ripwire/hooks/ripwire-nudge.sh --session-start"
           }
         ]
       }
@@ -97,7 +127,12 @@
     "frontend-design@claude-plugins-official": true
   },
   "effortLevel": "high",
-  "tui": "fullscreen",
+  "modelSettings": {
+    "claude-sonnet-5-5": {
+      "effortLevel": "high"
+    }
+  },
+  "tui": "default",
   "theme": "dark-daltonized",
   "editorMode": "vim"
 }

@@ -12,5 +12,6 @@ plan.txt
 plan.md
 design.txt
 design.md
+.claude
 
 **/.claude/settings.local.json
