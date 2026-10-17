@@ -180,12 +180,32 @@ local APPS = {
   ["p"] = focusDrawing,
 }
 
-for key, target in pairs(APPS) do
-  local fn = target
-  if type(target) == "string" then
-    fn = focusApp(target)
+local ONLY_WORK = { "3", "4", "a" }
+
+local function isPersonal()
+  local personal_hostname = "macbook.local"
+  local hostname, ok = hs.execute("hostname")
+  return ok and hostname:gsub("%s+$", "") == personal_hostname
+end
+
+local personal = isPersonal()
+
+local function isOnlyWork(key)
+  for _, k in ipairs(ONLY_WORK) do
+    if k == key then return true end
   end
-  hs.hotkey.bind({ "alt" }, key, fn)
+
+  return false
+end
+
+for key, target in pairs(APPS) do
+  if not personal or not isOnlyWork(key) then
+    local fn = target
+    if type(target) == "string" then
+      fn = focusApp(target)
+    end
+    hs.hotkey.bind({ "alt" }, key, fn)
+  end
 end
 
 -- alt+tab bounces between the two most recently used apps (replaces
