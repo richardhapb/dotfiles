@@ -8,7 +8,7 @@
 
 ## Delivery
 
-- Deliver relevant changes as a PR by default, unless I say otherwise. "Relevant" means changes to code / behavior, not docs. Skip the PR for docs-only edits. For internal tools, like neovim config or dotfiles is ok push direct to main.
+- Deliver relevant changes as a PR by default for projects that don't belong to me. For personal project is ok push direct to main, but not commit and push without my ocnfirmation, unless I say otherwise. I prefer to check the changes and do the commit on my own instad, in order to validate and understand your changes.
 - Use git commit conventions -- 50 chars header, 72 chars body. Prefix <fix/feat/chore/docs> in header.
 - By default use the convention rpb/<<action(fix/feat/chore/docs)/JIRA(ticket)>-<description>> where action and JIRA are exclusive. 
 - For MR / PR title, don't include commit action prefixes (fix/feat/chore/docs), keep them clean, just JIRA tickets if applies

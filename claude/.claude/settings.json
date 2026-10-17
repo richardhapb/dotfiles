@@ -127,12 +127,13 @@
     "frontend-design@claude-plugins-official": true
   },
   "effortLevel": "high",
+  "tui": "default",
+  "theme": "dark-daltonized",
+  "editorMode": "vim",
+  "agentPushNotifEnabled": true,
   "modelSettings": {
     "claude-sonnet-5-5": {
       "effortLevel": "high"
     }
-  },
-  "tui": "default",
-  "theme": "dark-daltonized",
-  "editorMode": "vim"
+  }
 }
