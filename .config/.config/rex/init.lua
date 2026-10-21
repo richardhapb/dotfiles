@@ -14,3 +14,6 @@ rex.action{
 for i = 1, 9 do
   rex.bind("cmd+" .. i, "session_goto", { index = i })
 end
+
+rex.bind("alt+shift+p", "client.tab.previous")
+rex.bind("alt+shift+n", "client.tab.next")

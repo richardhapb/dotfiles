@@ -93,4 +93,9 @@ export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
 # after every fpath addition. Calling it twice cost ~300ms per shell.
 fpath=($HOME/.docker/completions $fpath)
 # End of Docker CLI completions
-#
+
+# REX
+if [ -n "${REX_BIN_DIR:-}" ]; then
+    export PATH="$REX_BIN_DIR:$PATH"
+fi
+
