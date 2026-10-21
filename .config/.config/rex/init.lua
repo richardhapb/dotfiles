@@ -110,3 +110,65 @@ rex.action {
 for key, dir in pairs({ ["ctrl+h"] = "left", ["ctrl+j"] = "down", ["ctrl+k"] = "up", ["ctrl+l"] = "right" }) do
   rex.bind(key, "pane_nav", { direction = dir })
 end
+
+-- Projects: one command-palette action per directory ("Project: <name>"),
+-- which creates or switches to a session named after the directory.
+local HOME = os.getenv("HOME")
+local PROJECT_ROOTS = {
+  HOME .. "/proj", HOME .. "/proj/cont", HOME .. "/dev", HOME .. "/plugins",
+  HOME .. "/wip", HOME .. "/dotfiles/.config/.config",
+}
+local PROJECT_DIRS = { HOME .. "/dotfiles", HOME .. "/notes" }
+
+rex.action{
+  name  = "project_open",
+  title = "Open Project",
+  args  = { dir = "string" },
+  run   = function(ctx, args)
+    local label = args.dir:match("([^/]+)$"):gsub("%.", "_")
+    local id
+    for _, s in ipairs(rex.call("session.list").sessions or {}) do
+      if s.label == label then id = s.session_id end
+    end
+    if id == nil then
+      local res = rex.call("session.create", {
+        label = label,
+        initial_windows = { { layout = { block = {
+          flavor  = "com.superlogical.terminal.shell",
+          options = { cwd = args.dir },
+        } } } },
+      })
+      id = res.session_id
+    end
+    rex.client.queue("session.select", { session_id = id })
+  end,
+}
+
+local function project_dirs()
+  local dirs, seen = {}, {}
+  local function add(d)
+    if not seen[d] then seen[d] = true; dirs[#dirs + 1] = d end
+  end
+  for _, d in ipairs(PROJECT_DIRS) do add(d) end
+  for _, root in ipairs(PROJECT_ROOTS) do
+    local res = rex.exec.start({ "find", root, "-mindepth", "1", "-maxdepth", "1", "-type", "d" }):wait()
+    for d in (res.stdout or ""):gmatch("[^\n]+") do
+      if not d:match("/%.[^/]*$") then add(d) end
+    end
+  end
+  return dirs
+end
+
+local taken = {}
+for _, dir in ipairs(project_dirs()) do
+  local name = dir:match("([^/]+)$")
+  local id = "project_" .. name:lower():gsub("[^%w]", "_")
+  if not taken[id] then
+    taken[id] = true
+    rex.action{
+      name  = id,
+      title = "Project: " .. name,
+      run   = function(ctx) return rex.invoke("project_open", { dir = dir }) end,
+    }
+  end
+end
