@@ -164,7 +164,7 @@ local function focusApp(name)
 end
 
 local APPS = {
-  ["1"] = "Ghostty",
+  ["1"] = "Rex Beta",
   ["2"] = braveProfile("personal"),
   ["3"] = braveProfile("work"),
   ["4"] = "Slack",
