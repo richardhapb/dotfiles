@@ -1,6 +1,6 @@
 ---
 name: neovim-ref
-description: Turn a set of code references into a neovim quickfix list in a tmux pane, where each entry carries the explanation of why it matters. Use when the user asks to "show me the code references", "open the references in nvim", "show me that in a pane", or after a message, review, or analysis that cites several files and lines they want to read themselves. Read-only -- the notes live in the quickfix list, never in the repo. Suggest use this when you make many changes or exploration which requires an holistic understanding from different files.
+description: Turn a set of code references into a neovim quickfix list in a Rex pane, where each entry carries the explanation of why it matters. Use when the user asks to "show me the code references", "open the references in nvim", "show me that in a pane", or after a message, review, or analysis that cites several files and lines they want to read themselves. Read-only -- the notes live in the quickfix list, never in the repo. Suggest use this when you make many changes or exploration which requires an holistic understanding from different files.
 ---
 
 # Neovim reference pane
@@ -43,18 +43,19 @@ The `[tag]` is what makes the list readable as an argument rather than a pile of
 **3. Split and launch.**
 
 ```bash
-tmux split-window -h -t <session> -c "<repo dir>"
-sleep 1
-tmux send-keys -t <session> "nvim -c 'set errorformat=%f:%l:%m' \
-  -c 'cfile ~/notes/e2e/<name>.qf' -c 'copen 10'" Enter
+rex split -s "$REX_SESSION" -b "$REX_BLOCK" --split=right --focus=false --label refs \
+  -c "<repo dir>" --json -- nvim -c 'set errorformat=%f:%l:%m' \
+  -c "cfile $HOME/notes/e2e/<name>.qf" -c 'copen 10'
 sleep 3
 ```
+
+The `--json` result carries the new pane under `block_ids`. Drop `--focus=false` when they should land in the pane right away.
 
 **4. Verify before saying it is ready.**
 
 ```bash
-tmux list-panes -a -F '#{session_name}:#{window_index}.#{pane_index} #{pane_current_command}' | grep nvim
-tmux capture-pane -p -t <session>:<win>.<pane> | tail -14
+rex block ls -s "$REX_SESSION" --json | jq -r '.blocks[] | select(.label == "refs") | .block_id'
+rex capture -s "$REX_SESSION" -b <block> --trim | tail -14
 ```
 
 The capture must show the entries. `[Quickfix List]` reading `0,0-1` with nothing above it means the list is empty -- see below.
@@ -81,7 +82,7 @@ Do not generate a ctags file. It is the wrong tool and needs regenerating. Quick
 
 ## Gotchas
 
-- `tmux split-window -t <session>` targets the session's *active* window, and they may move the pane afterwards. Re-locate it with `tmux list-panes -a` before sending more keys rather than assuming the old target.
-- Sleep before `send-keys` and after, or the capture races nvim startup.
-- Send `Escape` first when driving an nvim that is already open, then each `:` command separately. Chaining with `|` misfires (`:set modifiable | edit! | set nomodifiable` throws `E21`).
+- They may move or close the pane afterwards. Re-locate it by its `refs` label with `rex block ls` before sending more keys rather than assuming the old id.
+- Sleep after launching and after each `rex send`, or the capture races nvim startup.
+- Send `escape` first (`rex send-key -b <block> escape`) when driving an nvim that is already open, then each `:` command separately via `rex send` + `rex send-key enter`. Chaining with `|` misfires (`:set modifiable | edit! | set nomodifiable` throws `E21`).
 - If a referenced file lives in another worktree or repo, check it exists first -- a bad path just drops the entry.

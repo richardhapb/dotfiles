@@ -1,55 +1,40 @@
 #!/usr/bin/env bash
-# tmux-cmd -- drive a sibling tmux pane next to the Claude CLI.
+# rex-cmd -- drive a sibling Rex pane next to the Claude CLI.
 #
 # The pane is a real TTY: interactive programs, colours, REPLs and pagers all
 # behave normally, and the user watches every command as it runs.
 #
 # Usage:
-#   tmux-cmd.sh open   [-d DIR] [-l SIZE] [-v]   create/reuse the pane, print its id
-#   tmux-cmd.sh id                               print the pane id ("" if none)
-#   tmux-cmd.sh status                           pane id + what is running in it
-#   tmux-cmd.sh run    [-t SECS] <command...>    run, wait, print output + exit code
-#   tmux-cmd.sh send   <text...>                 type text + Enter, do not wait
-#   tmux-cmd.sh key    <key>...                  send key names (C-c, Up, Enter, q)
-#   tmux-cmd.sh capture [-n LINES] [-a]          dump what the pane shows
-#   tmux-cmd.sh close                            kill the pane
+#   rex-cmd.sh open   [-d DIR] [-l PCT] [-v]     create/reuse the pane, print its id
+#   rex-cmd.sh id                                print the pane id ("" if none)
+#   rex-cmd.sh status                            pane id + what is running in it
+#   rex-cmd.sh run    [-t SECS] <command...>     run, wait, print output + exit code
+#   rex-cmd.sh send   <text...>                  type text + Enter, do not wait
+#   rex-cmd.sh key    <key>...                   send key names (ctrl+c, up, enter, q)
+#   rex-cmd.sh capture [-n LINES] [-a]           dump what the pane shows
+#   rex-cmd.sh close                             close the pane
 #
 # `run` is for shell commands you need the result of.
 # `send`/`key`/`capture` are for interactive programs already running in the pane.
 
 set -uo pipefail
 
-TAG=@claude_cmd_pane
+die() { printf 'rex-cmd: %s\n' "$*" >&2; exit 1; }
 
-die() { printf 'tmux-cmd: %s\n' "$*" >&2; exit 1; }
+command -v rex >/dev/null || die "rex not found on PATH"
+command -v jq >/dev/null || die "jq not found on PATH"
+[ -n "${REX_SESSION:-}" ] && [ -n "${REX_BLOCK:-}" ] \
+  || die "not inside Rex (\$REX_SESSION / \$REX_BLOCK unset). Start Claude inside a Rex pane."
 
-[ -n "${TMUX:-}" ] || die "not inside tmux (\$TMUX is unset). Start Claude inside a tmux session."
-command -v tmux >/dev/null || die "tmux not found on PATH"
+SESSION=$REX_SESSION
+PARENT=$REX_BLOCK
+# The pane is found by label, which embeds the Claude pane that created it, so
+# several Claude sessions never steal each other's command pane.
+LABEL="claude-cmd-${PARENT##*-}"
 
-# The pane Claude itself lives in. Panes are tagged with it so several Claude
-# sessions in the same server never steal each other's command pane.
-parent_pane() {
-  if [ -n "${TMUX_PANE:-}" ]; then printf '%s' "$TMUX_PANE"
-  else tmux display-message -p '#{pane_id}'
-  fi
-}
-PARENT=$(parent_pane)
-
-# An explicit separator matters: untagged panes emit an empty first field, and
-# awk's default splitting would collapse it and shift pane_id into $1.
 find_pane() {
-  tmux list-panes -a -F '#{'"$TAG"'}|#{pane_id}' 2>/dev/null \
-    | awk -F'|' -v p="$PARENT" '$1 == p { print $2; exit }'
-}
-
-pane_alive() {
-  [ -n "${1:-}" ] && tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qx -- "$1"
-}
-
-require_pane() {
-  local p; p=$(find_pane)
-  pane_alive "$p" || die "no command pane yet -- run 'tmux-cmd.sh open' first"
-  printf '%s' "$p"
+  rex block ls -s "$SESSION" --json 2>/dev/null \
+    | jq -r --arg l "$LABEL" '[.blocks[] | select(.label == $l)][0].block_id // empty'
 }
 
 # Programs we treat as "a shell sitting at a prompt". Anything else means an
@@ -58,58 +43,81 @@ is_shell() {
   case "$1" in zsh|bash|sh|fish|dash|ksh|-zsh|-bash) return 0;; *) return 1;; esac
 }
 
-# capture-pane's -S only moves the start line; the end stays at the bottom of
-# the screen, so a bare -S -N returns N + pane_height lines. Drop the blank
-# padding a partly-filled pane leaves behind, then take the real tail.
-pane_tail() {
-  local pane="$1" n="${2:-}"
-  local out
-  out=$(tmux capture-pane -p -J -S - -t "$pane" \
-    | awk '{ L[NR]=$0 } END { last=0; for (i=1;i<=NR;i++) if (L[i] ~ /[^ \t]/) last=i; for (i=1;i<=last;i++) print L[i] }')
-  if [ -n "$n" ]; then printf '%s\n' "$out" | tail -n "$n"; else printf '%s\n' "$out"; fi
+pane_cmd() {
+  rex block call -s "$SESSION" -b "$1" process 2>/dev/null | jq -r '.foreground.name // empty'
 }
 
+# Screen + scrollback as text, soft-wrapped lines joined, trailing blanks dropped.
+pane_text() {
+  rex block call -s "$SESSION" -b "$1" format '{"format":"text","trim":true,"unwrap":true}' 2>/dev/null \
+    | jq -r '.content // empty'
+}
+
+pane_tail() {
+  local pane="$1" n="${2:-}"
+  if [ -n "$n" ]; then pane_text "$pane" | tail -n "$n"; else pane_text "$pane"; fi
+}
+
+keys() { rex send-key -s "$SESSION" -b "$1" "${@:2}"; }
+
 tmpdir() {
-  local d="${TMPDIR:-/tmp}/tmux-cmd.$$"
+  local d="${TMPDIR:-/tmp}/rex-cmd.$$"
   mkdir -p "$d" && printf '%s' "$d"
+}
+
+require_pane() {
+  local p; p=$(find_pane)
+  [ -n "$p" ] || die "no command pane yet -- run 'rex-cmd.sh open' first"
+  printf '%s' "$p"
 }
 
 # ---------------------------------------------------------------- open --------
 cmd_open() {
-  local dir="" size="40%" split="-h"
+  local dir="" size=40 dirn=right
   while [ $# -gt 0 ]; do
     case "$1" in
       -d) dir="$2"; shift 2;;
-      -l) size="$2"; shift 2;;
-      -v) split="-v"; shift;;
+      -l) size="${2%\%}"; shift 2;;
+      -v) dirn=below; shift;;
       *) die "open: unknown option $1";;
     esac
   done
 
   local p; p=$(find_pane)
-  if pane_alive "$p"; then printf '%s\n' "$p"; return 0; fi
+  if [ -n "$p" ]; then printf '%s\n' "$p"; return 0; fi
 
-  local args=(split-window "$split" -d -l "$size" -P -F '#{pane_id}' -t "$PARENT")
+  local args=(split -s "$SESSION" -b "$PARENT" --split="$dirn" --ratio "$size" --focus=false --label "$LABEL" --json)
   [ -n "$dir" ] && args+=(-c "$dir")
-  p=$(tmux "${args[@]}") || die "could not split the window (is it too small?)"
+  p=$(rex "${args[@]}" | jq -r '.block_ids[0] // empty')
+  [ -n "$p" ] || die "could not split the pane (is it too small?)"
 
-  tmux set-option -p -t "$p" "$TAG" "$PARENT"
-  tmux select-pane -t "$p" -T "claude-cmd"
+  wait_for_shell "$p"
   inject_fns "$p"
   printf '%s\n' "$p"
 }
 
+# A fresh pane reports `login` until the shell has exec'd; typing before then
+# loses the keystrokes.
+wait_for_shell() {
+  local i
+  for i in $(seq 1 40); do
+    is_shell "$(pane_cmd "$1")" && return 0
+    sleep 0.25
+  done
+  die "pane never reached a shell prompt"
+}
+
 # Marker helpers live in the pane's shell so the visible command line stays
-# readable: `__ccb id; <command>; __cce id` instead of two inline printfs.
+# readable: `__ccb <id>; <command>; __cce <id>` instead of two inline printfs.
 # In __cce, $? is still the command's status because argument expansion happens
 # before printf runs. `clear` hides the definition itself.
 inject_fns() {
   local pane="$1"
-  tmux send-keys -t "$pane" C-e C-u
-  # Markers print dimmed so they stay unobtrusive on screen. capture-pane
-  # without -e drops the escape codes, so matching still sees a bare marker.
-  tmux send-keys -t "$pane" -l -- '__ccb(){ printf "\n\033[2m@@B:%s@@\033[0m\n" "$1"; }; __cce(){ printf "\033[2m@@E:%s:%s@@\033[0m\n" "$1" "$?"; }; clear'
-  tmux send-keys -t "$pane" Enter
+  keys "$pane" ctrl+e ctrl+u
+  # Markers print dimmed so they stay unobtrusive on screen; the escape codes
+  # are not part of the text capture, so matching sees a bare marker.
+  rex send -s "$SESSION" -b "$pane" -- '__ccb(){ printf "\n\033[2m@@B:%s@@\033[0m\n" "$1"; }; __cce(){ printf "\033[2m@@E:%s:%s@@\033[0m\n" "$1" "$?"; }; clear'
+  keys "$pane" enter
 }
 
 # ----------------------------------------------------------------- run --------
@@ -129,9 +137,9 @@ cmd_run() {
   [ $# -gt 0 ] || die "run: no command given"
 
   local pane; pane=$(find_pane)
-  pane_alive "$pane" || pane=$(cmd_open)   # "use the pane for everything" should not need a separate open
-  local running; running=$(tmux display-message -p -t "$pane" '#{pane_current_command}')
-  is_shell "$running" || die "pane is running '$running', not a shell. Use 'send'/'key' to talk to it, or 'key C-c' first."
+  [ -n "$pane" ] || pane=$(cmd_open)   # "use the pane for everything" should not need a separate open
+  local running; running=$(pane_cmd "$pane")
+  is_shell "$running" || die "pane is running '$running', not a shell. Use 'send'/'key' to talk to it, or 'key ctrl+c' first."
 
   _exec_once "$pane" "$timeout" "$*"
   local st=$?
@@ -160,14 +168,15 @@ _exec_once() {
   fi
 
   # Clear whatever the user may have half-typed at the prompt.
-  tmux send-keys -t "$pane" C-e C-u
-  tmux send-keys -t "$pane" -l -- "__ccb ${id}; ${cmd}; __cce ${id}"
-  tmux send-keys -t "$pane" Enter
+  keys "$pane" ctrl+e ctrl+u
+  rex send -s "$SESSION" -b "$pane" -- "__ccb ${id}; ${cmd}; __cce ${id}"
+  keys "$pane" enter
 
   local snap="$dir/$id.txt"
   local deadline=$(( $(date +%s) + timeout )) done=0
   while :; do
-    tmux capture-pane -p -J -S - -t "$pane" > "$snap" 2>/dev/null || die "pane disappeared while the command was running"
+    pane_text "$pane" > "$snap"
+    [ -s "$snap" ] || die "pane disappeared while the command was running"
     if grep -qE "^@@E:${id}:[0-9]+@@$" "$snap"; then done=1; break; fi
     # Scoped to lines after this run's own typed line: a "command not found"
     # left in the scrollback by an earlier run must not trigger a false retry.
@@ -182,7 +191,7 @@ _exec_once() {
   if [ "$done" -eq 0 ]; then
     printf -- '--- still running after %ss (pane %s) ---\n' "$timeout" "$pane"
     pane_tail "$pane" 40
-    printf -- '--- it keeps running; interrupt with: tmux-cmd.sh key C-c ---\n'
+    printf -- '--- it keeps running; interrupt with: rex-cmd.sh key ctrl+c ---\n'
     rm -f "$snap"
     return 124
   fi
@@ -205,14 +214,14 @@ _exec_once() {
 cmd_send() {
   [ $# -gt 0 ] || die "send: no text given"
   local pane; pane=$(require_pane)
-  tmux send-keys -t "$pane" -l -- "$*"
-  tmux send-keys -t "$pane" Enter
+  rex send -s "$SESSION" -b "$pane" -- "$*"
+  keys "$pane" enter
 }
 
 cmd_key() {
   [ $# -gt 0 ] || die "key: no key given"
   local pane; pane=$(require_pane)
-  tmux send-keys -t "$pane" "$@"
+  keys "$pane" "$@"
 }
 
 # -------------------------------------------------------------- capture ------
@@ -234,14 +243,18 @@ cmd_capture() {
 # --------------------------------------------------------------- status ------
 cmd_status() {
   local p; p=$(find_pane)
-  if ! pane_alive "$p"; then echo "no command pane"; return 1; fi
-  tmux display-message -p -t "$p" 'pane=#{pane_id} running=#{pane_current_command} size=#{pane_width}x#{pane_height} cwd=#{pane_current_path}'
+  if [ -z "$p" ]; then echo "no command pane"; return 1; fi
+  local size proc
+  size=$(rex block call -s "$SESSION" -b "$p" size 2>/dev/null | jq -r '"\(.columns)x\(.rows)"')
+  proc=$(rex block call -s "$SESSION" -b "$p" process 2>/dev/null)
+  printf 'pane=%s running=%s size=%s cwd=%s\n' "$p" \
+    "$(jq -r '.foreground.name // empty' <<<"$proc")" "$size" "$(jq -r '.foreground.cwd // empty' <<<"$proc")"
 }
 
 cmd_close() {
   local p; p=$(find_pane)
-  pane_alive "$p" || { echo "no command pane"; return 0; }
-  tmux kill-pane -t "$p" && echo "closed $p"
+  [ -n "$p" ] || { echo "no command pane"; return 0; }
+  rex block close -s "$SESSION" "$p" && echo "closed $p"
 }
 
 # ------------------------------------------------------------------ main -----
@@ -255,5 +268,5 @@ case "$sub" in
   key)     cmd_key "$@";;
   capture) cmd_capture "$@";;
   close)   cmd_close;;
-  *) die "usage: tmux-cmd.sh {open|id|status|run|send|key|capture|close} [args]";;
+  *) die "usage: rex-cmd.sh {open|id|status|run|send|key|capture|close} [args]";;
 esac
