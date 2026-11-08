@@ -2,7 +2,7 @@ rex.action {
   name  = "session_goto",
   title = "Go to Session by Index",
   args  = { index = "integer" },
-  run   = function(ctx, args)
+  run   = function(_, args)
     local res, err = rex.call("session.list")
     if res == nil then error(err, 0) end
     local s = res.sessions and res.sessions[args.index]
@@ -17,6 +17,30 @@ end
 
 rex.bind("alt+shift+p", "client.tab.previous")
 rex.bind("alt+shift+n", "client.tab.next")
+
+local NVIM_CONFIG_DIR = os.getenv("HOME") .. "/.config/nvim"
+
+rex.action {
+  name  = "nvim_config_tab",
+  title = "Open Neovim Config in New Tab",
+  run   = function(ctx)
+    local res = rex.call("session.new_window", {
+      session_id   = ctx.session_id,
+      window_label = "nvim-config",
+      layout       = {
+        block = {
+          flavor  = "com.superlogical.terminal.shell",
+          label   = "nvim-config",
+          options = { command = { "nvim" }, cwd = NVIM_CONFIG_DIR },
+        }
+      },
+    })
+    rex.call("session.focus_block", { session_id = ctx.session_id, block_id = res.block_ids[1] })
+    rex.client.queue("session.select", { session_id = ctx.session_id, window_id = res.window_id })
+  end,
+}
+
+rex.bind("alt+shift+v", "nvim_config_tab")
 
 local NOTES_DIR = os.getenv("HOME") .. "/notes"
 local NOTES_RATIO = 0.8
@@ -168,7 +192,7 @@ for _, dir in ipairs(project_dirs()) do
     rex.action{
       name  = id,
       title = "Project: " .. name,
-      run   = function(ctx) return rex.invoke("project_open", { dir = dir }) end,
+      run   = function(_) return rex.invoke("project_open", { dir = dir }) end,
     }
   end
 end

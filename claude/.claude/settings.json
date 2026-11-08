@@ -3,21 +3,13 @@
     "allow": [
       "mcp__honcho",
       "Bash(cd *)",
-      "Bash(hmt *)"
+      "Bash(hmt *)",
+      "mcp__claude_ai_Atlassian__addCommentToJiraIssue"
     ]
   },
   "model": "sonnet",
   "hooks": {
     "UserPromptSubmit": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$HOME/.tmux/plugins/tmux-claude-session-manager/scripts/state.sh working"
-          }
-        ]
-      },
       {
         "matcher": "*",
         "hooks": [
@@ -31,15 +23,6 @@
     ],
     "Notification": [
       {
-        "matcher": "permission_prompt",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$HOME/.tmux/plugins/tmux-claude-session-manager/scripts/state.sh waiting"
-          }
-        ]
-      },
-      {
         "matcher": "",
         "hooks": [
           {
@@ -51,15 +34,6 @@
       }
     ],
     "PreToolUse": [
-      {
-        "matcher": "AskUserQuestion",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$HOME/.tmux/plugins/tmux-claude-session-manager/scripts/state.sh waiting"
-          }
-        ]
-      },
       {
         "matcher": "Bash",
         "hooks": [
@@ -90,10 +64,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$HOME/.tmux/plugins/tmux-claude-session-manager/scripts/state.sh idle"
-          },
-          {
-            "type": "command",
             "command": "$HOME/.local/bin/claude-notify 'Claude finished' Glass",
             "async": true
           }
@@ -107,6 +77,15 @@
           {
             "type": "command",
             "command": "$HOME/.local/share/ripwire/hooks/ripwire-nudge.sh --session-start"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/sh -c 'rex __internal session-start --agent claude 2>/dev/null || true'",
+            "timeout": 5
           }
         ]
       }

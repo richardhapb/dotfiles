@@ -13,5 +13,7 @@ plan.md
 design.txt
 design.md
 .claude
+# auto-created locally to mock split.io
+.split
 
 **/.claude/settings.local.json
