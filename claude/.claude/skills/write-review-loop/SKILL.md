@@ -37,40 +37,28 @@ Only at a checkpoint do you launch (or re-launch) a reviewer. Between checkpoint
 
 ## Snapshot
 
-At a checkpoint, freeze the current state so the reviewer reads a stable thing even while you keep editing afterward. Write a snapshot file the reviewer reads, containing:
+At a checkpoint, freeze the current state so the reviewer reads a stable thing even while you keep editing afterward. Run the bundled script (path relative to this skill dir), pointing it at the session scratchpad so the reviewer can read it without leaving the allowed directories:
 
-1. **The full local diff** of tracked changes against the base (the branch's merge-base or whatever the work started from):
+```bash
+scripts/snapshot.sh -o <scratchpad-dir> <repo-abspath> [base]
+```
 
-   ```bash
-   git -C <repo-abspath> --no-pager diff <base>...HEAD > /tmp/wrl-snapshot-<n>.diff   # committed work
-   git -C <repo-abspath> --no-pager diff > /tmp/wrl-worktree-<n>.diff                 # unstaged
-   git -C <repo-abspath> --no-pager diff --cached >> /tmp/wrl-worktree-<n>.diff       # staged
-   ```
+It prints the snapshot directory as its last line. Inside:
 
-2. **Frozen copies of untracked files** — these do NOT show up in `git diff` and are the most-missed part of a review:
+- `committed.diff` -- merge-base(base, HEAD)..HEAD. `base` defaults to the first of origin/main, origin/master, main, master.
+- `worktree.diff` -- staged + unstaged changes against HEAD.
+- `untracked/` -- frozen copies of untracked, non-ignored text files. These never show up in `git diff` and are the most-missed part of a review. The reviewer reads the copies, not the live paths: handing it live paths reintroduces failure mode #1.
+- `manifest.txt` -- `<copy path> -> <repo-relative path>`; paste it into the reviewer prompt.
+- `skipped.txt` -- untracked files left out (possible secrets, binaries, symlinks). Read it: if something skipped matters for the review, tell the reviewer about it in the prompt rather than copying a secret.
 
-   ```bash
-   git -C <repo-abspath> --no-pager status --short
-   ```
-
-   Pull out the `??` entries and **copy each one into the snapshot directory**, preserving relative paths:
-
-   ```bash
-   mkdir -p /tmp/wrl-untracked-<n>
-   git -C <repo-abspath> ls-files --others --exclude-standard \
-     | rsync -aR --files-from=- <repo-abspath>/ /tmp/wrl-untracked-<n>/
-   ```
-
-   The reviewer reads the copies, not the live paths. Handing it live paths reintroduces failure mode #1 — you edit an untracked file three seconds after launch and the reviewer reads the newer state while reviewing the older diff.
-
-A `git stash create` ref or a throwaway WIP commit also work as a frozen reference (a WIP commit after `git add -A` has the advantage of freezing untracked files too). The point is the reviewer reviews **that frozen reference**, so edits you make after the checkpoint can't corrupt the review in flight.
+A `git stash create` ref or a throwaway WIP commit also work as a frozen reference. The point is that the reviewer reviews **that frozen reference**, so edits made after the checkpoint can't corrupt the review in flight.
 
 ## Launching the reviewer
 
-Use the Agent tool, `run_in_background: true`, `subagent_type: general-purpose` (or `Explore` for a strictly read-only pass). Give it:
+Use the Agent tool, `run_in_background: true`, `subagent_type: Explore` (read-only is enforced; use `general-purpose` only if the review must run code). Give it:
 
-- The repo's **absolute path** and the snapshot file path(s).
-- The untracked-file **copies** under the snapshot directory (path map: repo-relative path -> copy path) to read in full.
+- The repo's **absolute path**, the snapshot directory, and the contents of `manifest.txt` (the untracked-file copies to read in full).
+- The repo's CLAUDE.md rules, pasted in, to check the diff against.
 - For a **re-review**, the prior findings and which ones you've addressed — so it *verifies the fixes* instead of re-reporting them — plus the **fresh** snapshot path.
 
 Prefer **one reviewer per checkpoint** over a single long-lived reviewer reading live files. A long-lived reviewer racing the working tree is exactly failure mode #1.
@@ -81,8 +69,8 @@ Prefer **one reviewer per checkpoint** over a single long-lived reviewer reading
 >
 > - **Never use `cd`** — it triggers permission prompts. Use absolute paths and `git -C <repo-abspath> ...` for any git command.
 > - Always `git --no-pager`.
-> - If a read-only git or read command is blocked by the sandbox, **retry the same call with `dangerouslyDisableSandbox: true`** (safe for read-only git/reads). If Bash git is denied entirely, fall back to the **Read tool on the pre-written snapshot file** at `<snapshot-path>`.
-> - **Untracked new files do not appear in `git diff`.** Read each untracked-file snapshot copy listed below in full (these are frozen copies under `/tmp/wrl-untracked-<n>/`; the repo-relative path is given next to each): `<copy-path -> repo-relative-path>`. Do not read the live repo paths for these — they may have changed since the snapshot.
+> - If a git command is denied, fall back to the **Read tool on the snapshot files** (`committed.diff`, `worktree.diff`). Do not try to bypass the sandbox.
+> - **Untracked new files do not appear in `git diff`.** Read each untracked-file snapshot copy listed below in full (frozen copies under the snapshot directory; the repo-relative path is given next to each): `<copy-path -> repo-relative-path>`. Do not read the live repo paths for these — they may have changed since the snapshot.
 > - Report findings grouped by severity: **Blocker / High / Medium / Low / Nit**. For each: `file:line`, what's wrong, and a concrete fix.
 > - End with a one-line **verdict**: `ship` / `fix-then-ship` / `needs-work`.
 > - **Do not ask the author questions** — they're not in the room. Form an opinion from the snapshot.
@@ -105,9 +93,18 @@ checkpoint reached (batch done, tests + lint pass locally)
   -> next checkpoint
   -> re-review (hand it prior findings + fresh snapshot)
 repeat until verdict has no open High/Medium
+loop end: remove only the snapshot directories this loop created (the paths the script printed), not a glob
 ```
 
 **Stop condition:** all High/Medium findings resolved (verdict `ship`, or `fix-then-ship` with only Low/Nit left). Low/Nit don't block the loop from ending. The verdict must come from a review of the snapshot that *includes* your last fixes — fixing the final High/Medium batch and stopping without a re-review isn't a clean exit.
+
+## Related skills
+
+- `pre-mr`: one-off self-review of a branch before opening an MR; it may ask questions. This skill is the continuous, no-questions variant.
+- `code-review` (built-in): a single deeper pass over a diff.
+- `mr-review`: for someone else's merge request, not local work.
+
+Hand the final verdict and any deferred Low/Nit findings to `pre-mr` or the MR description so they aren't lost.
 
 ## Anti-patterns
 
