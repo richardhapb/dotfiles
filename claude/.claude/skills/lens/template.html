@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lens</title>
+<style>
+:root{--bg:#f6f7f9;--panel:#fff;--ink:#1c2330;--mute:#5d6878;--line:#dfe3ea;--accent:#2f5bea;--accent-soft:#e8eefe;--good:#157f4b;--good-soft:#e3f5ec;--warn:#9a6700;--warn-soft:#fff4d6;--bad:#b4232c;--bad-soft:#fde8ea;
+--http:#2f6fed;--grpc:#8b4ee0;--temporal:#16875a;--kafka:#d9730d;--sql:#6b7686;--webhook:#d6336c;--browser:#0b8aa0;--test:#a05a00;--code:#f1f3f7;--shadow:0 1px 2px rgba(20,30,50,.06),0 4px 14px rgba(20,30,50,.05)}
+[data-theme=dark]{--bg:#0f141c;--panel:#171e29;--ink:#e6eaf1;--mute:#98a3b5;--line:#2a3445;--accent:#7aa2ff;--accent-soft:#1d2a47;--good:#4cc38a;--good-soft:#14301f;--warn:#e0b04a;--warn-soft:#33290f;--bad:#ff7b84;--bad-soft:#3a1519;
+--http:#6ea0ff;--grpc:#b58cf5;--temporal:#4cc38a;--kafka:#f0993f;--sql:#9aa6b8;--webhook:#f27aa5;--browser:#4cc9de;--test:#e6a64d;--code:#10161f;--shadow:none}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:16px}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+a{color:var(--accent)}code,pre,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:.88em}
+.layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:0;max-width:1500px;margin:0 auto}
+nav{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:22px 14px 22px 20px;border-right:1px solid var(--line)}
+nav .brand{font-weight:700;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin-bottom:12px}
+nav a{display:block;padding:5px 10px;border-radius:7px;color:var(--mute);text-decoration:none;font-size:13.5px;margin:1px 0}
+nav a:hover{background:var(--accent-soft);color:var(--ink)}nav a.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.theme{margin-top:14px;font-size:12px;color:var(--mute);cursor:pointer;border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:5px 9px}
+main{padding:26px 34px 80px;min-width:0}
+header.top{margin-bottom:26px}
+.badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.badge{display:inline-block;font-size:11.5px;font-weight:600;letter-spacing:.03em;padding:2px 9px;border-radius:99px;background:var(--accent-soft);color:var(--accent);text-transform:uppercase}
+.badge.mute{background:var(--code);color:var(--mute);text-transform:none;font-weight:500}
+h1{font-size:28px;line-height:1.2;margin:0 0 6px}.sub{color:var(--mute);font-size:16px;margin:0 0 12px}
+.refs a{margin-right:14px;font-size:13.5px}
+section.sec{margin:0 0 34px}
+h2{font-size:19px;margin:0 0 4px;display:flex;align-items:center;gap:10px}
+h2 .n{font-size:12px;color:var(--mute);font-weight:600;background:var(--code);border-radius:6px;padding:1px 7px}
+.lead{color:var(--mute);margin:0 0 14px;font-size:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+.grid{display:grid;gap:12px}.g2{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}.g3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.tldr{border-left:4px solid var(--accent)}.tldr ul{margin:6px 0 0;padding-left:20px}.tldr li{margin:4px 0}
+.model{font-size:17px;font-weight:600;margin:0 0 4px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:900px){.cols{grid-template-columns:1fr}.layout{grid-template-columns:1fr}nav{display:none}main{padding:18px}}
+.cols .col{border-radius:10px;padding:12px 14px;border:1px solid var(--line)}
+.col.before{background:var(--bad-soft)}.col.after{background:var(--good-soft)}
+.col h4{margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase}.col ul{margin:0;padding-left:18px}.col li{margin:3px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px}table.tp{table-layout:fixed}table.tp td{overflow-wrap:anywhere}th,td{border-bottom:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}th{color:var(--mute);font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+.pill{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px;color:#fff}
+.p-http{background:var(--http)}.p-grpc{background:var(--grpc)}.p-temporal{background:var(--temporal)}.p-kafka{background:var(--kafka)}.p-sql{background:var(--sql)}.p-webhook{background:var(--webhook)}.p-browser{background:var(--browser)}.p-test{background:var(--test)}.p-other{background:var(--mute)}
+.part{display:flex;flex-direction:column;gap:5px}.part h3{margin:0;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.part p{margin:0;color:var(--mute);font-size:13.5px}
+.part code{white-space:pre-wrap;word-break:break-word}.part .kv{font-size:12.5px;color:var(--mute)}.part .kv b{color:var(--ink);font-weight:600}
+.svgwrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:var(--shadow)}
+svg text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;fill:var(--ink)}svg .mute{fill:var(--mute)}
+svg .step{cursor:default}svg .step.link{cursor:pointer}svg .step.link:hover .lbl{text-decoration:underline}svg .step .hit{fill:transparent;pointer-events:all}svg .step.link:hover .hit{fill:var(--accent-soft);opacity:.7}
+svg .life{stroke:var(--line);stroke-dasharray:4 4}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--mute);margin:8px 2px 0}
+.legend.terms{margin-top:6px}.legend.terms b{color:var(--ink);font-weight:650}.legend i{display:inline-block;width:22px;height:0;border-top:2px solid;vertical-align:middle;margin-right:5px}
+.pay{margin-bottom:12px;scroll-margin-top:16px}.pay.hl{outline:2px solid var(--accent);outline-offset:2px}
+.pay summary{cursor:pointer;display:flex;gap:10px;align-items:center;flex-wrap:wrap;list-style:none}
+.pay summary::-webkit-details-marker{display:none}.pay summary:before{content:"▸";color:var(--mute)}.pay[open] summary:before{content:"▾"}
+.pay .ttl{font-weight:650}.pay .when{font-size:12px;color:var(--mute)}
+.pay .summ{margin:8px 0;color:var(--mute);font-size:14px}
+.bodies{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}.body{min-width:0}@media(max-width:1100px){.bodies{grid-template-columns:1fr}}
+.body h5{margin:0 0 4px;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+pre.json{margin:0;background:var(--code);border-radius:9px;padding:10px 12px;overflow:auto;font-size:12.3px;line-height:1.5;max-height:420px}
+pre.json .ln{display:block;white-space:pre}pre.json .ln.an{background:var(--warn-soft);border-radius:3px}
+.k{color:var(--grpc)}.s{color:var(--temporal)}.nu{color:var(--kafka)}.nl{color:var(--mute)}
+.b{display:inline-block;min-width:16px;height:16px;line-height:16px;text-align:center;border-radius:99px;background:var(--warn);color:#fff;font-size:10.5px;font-weight:700;margin-left:6px}
+ol.ann{margin:8px 0 0;padding-left:0;list-style:none;font-size:13.5px}ol.ann li{margin:5px 0;display:flex;gap:8px}ol.ann .b{margin:2px 0 0;flex:none}
+.plinks{margin-top:4px;font-size:12.5px;color:var(--mute)}.empty{color:var(--mute);font-style:italic;font-size:13px}
+.ev{font-size:11.5px;font-weight:700;padding:1px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.04em}
+.ev.observed{background:var(--good-soft);color:var(--good)}.ev.code{background:var(--accent-soft);color:var(--accent)}.ev.reported{background:var(--code);color:var(--mute)}.ev.inferred{background:var(--warn-soft);color:var(--warn)}.ev.unverified{background:var(--bad-soft);color:var(--bad)}
+footer{color:var(--mute);font-size:12.5px;border-top:1px solid var(--line);padding-top:14px;margin-top:40px}
+@media print{nav,.theme{display:none}.layout{display:block}main{padding:0}.card,.svgwrap{box-shadow:none;break-inside:avoid}}
+.wt{margin-top:12px}.wt td.n{width:34px}
+.nb{display:inline-block;min-width:20px;height:20px;line-height:20px;text-align:center;border-radius:99px;background:var(--accent);color:#fff;font-size:11px;font-weight:700}
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav id="nav"><div class="brand">lens</div><div id="navlinks"></div><button class="theme" id="theme">Toggle theme</button></nav>
+  <main id="main"></main>
+</div>
+<script>
+const D = /*__DATA__*/null;
+const P = /*__PAYLOADS__*/{};
+const titles = Object.fromEntries((D.payloads || []).map((p) => [p.id, p.title]));
+const payLinks = (st) => { const ids = [st.payload, ...(st.also || [])].filter((id) => id && P[id]); return ids.length ? `<div class="plinks">Payloads: ${ids.map((id) => `<a href="#pay-${esc(id)}" onclick="openPayload('${esc(id)}');return false">${esc(titles[id] || id)}</a>`).join(' · ')}</div>` : ''; };
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const md = (s) => esc(s).replace(/\[([^\]]+)\]\((https:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>').replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+const PROTO = { HTTP: 'http', gRPC: 'grpc', Temporal: 'temporal', Kafka: 'kafka', SQL: 'sql', webhook: 'webhook', Webhook: 'webhook', browser: 'browser', Browser: 'browser', test: 'test', Test: 'test' };
+const pill = (p) => p ? `<span class="pill p-${PROTO[p] || 'other'}">${esc(p)}</span>` : '';
+const pcol = (p) => `var(--${PROTO[p] || 'mute'})`;
+const sections = [];
+function sec(id, title, lead, html) {
+  if (!html) return;
+  sections.push({ id, title });
+  const n = sections.length;
+  $('#main').insertAdjacentHTML('beforeend', `<section class="sec" id="${id}"><h2><span class="n">${n}</span>${esc(title)}</h2>${lead ? `<p class="lead">${md(lead)}</p>` : ''}${html}</section>`);
+}
+
+/* ---------- header ---------- */
+function header() {
+  const m = D.meta;
+  document.title = m.title + ' · lens';
+  const refs = (m.refs || []).map((r) => `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.label)}</a>`).join('');
+  $('#main').insertAdjacentHTML('beforeend', `<header class="top"><div class="badges"><span class="badge">${esc(m.kind)}</span>${(m.tags || []).map((t) => `<span class="badge mute">${esc(t)}</span>`).join('')}<span class="badge mute">${esc(m.date)}</span></div>
+  <h1>${esc(m.title)}</h1><p class="sub">${md(m.subtitle || '')}</p><div class="refs">${refs}</div></header>`);
+}
+
+/* ---------- tldr + model ---------- */
+function tldr() {
+  if (!D.tldr) return;
+  sec('tldr', 'TL;DR', '', `<div class="card tldr">${D.model ? `<p class="model">${md(D.model)}</p>` : ''}<ul>${D.tldr.map((x) => `<li>${md(x)}</li>`).join('')}</ul></div>`);
+}
+
+/* ---------- participants + component map ---------- */
+function participants() {
+  if (!D.participants) return;
+  const cards = D.participants.map((p) => `<div class="card part"><h3>${esc(p.name)} <span class="badge mute">${esc(p.kind || 'service')}</span></h3><p>${md(p.role || '')}</p>
+    ${p.local ? `<div class="kv"><b>Ran as:</b> ${md(p.local)}</div>` : ''}${p.owns ? `<div class="kv"><b>Owns:</b> ${md(p.owns)}</div>` : ''}${p.repo ? `<div class="kv"><b>Repo:</b> <code>${esc(p.repo)}</code></div>` : ''}</div>`).join('');
+  const detail = D.participants.some((p) => p.role || p.owns || p.repo || p.local);
+  sec('participants', 'Components', D.participantsLead || 'The pieces the change or flow touches. Dashed lines are inferred, solid lines are backed by the code or a capture.', `${map()}${detail ? `<div class="grid g2" style="margin-top:14px">${cards}</div>` : ''}`);
+}
+function wrapName(s, max) {
+  if (s.length <= max) return [s];
+  const w = s.split(' '); let best = null;
+  for (let i = 1; i < w.length; i++) { const a = w.slice(0, i).join(' '), b = w.slice(i).join(' '); const m = Math.max(a.length, b.length); if (!best || m < best.m) best = { m, l: [a, b] }; }
+  return best ? best.l : [s];
+}
+function nameText(cx, cy, s, max, size) {
+  const L = wrapName(s, max), lh = size + 2, y0 = cy - ((L.length - 1) * lh) / 2;
+  return `<text x="${cx}" y="${y0 + size * 0.36}" text-anchor="middle" font-size="${size}" font-weight="700">${L.map((l, i) => `<tspan x="${cx}" dy="${i ? lh : 0}">${esc(l)}</tspan>`).join('')}</text>`;
+}
+/* Layered left-to-right layout from edges alone: returns grid cells (x = rank, y = row) and waypoints for edges that skip a column or run backwards. */
+function autoPos(ids, edges, opt) {
+  const have = new Set(ids);
+  const E = edges.map((e, i) => ({ f: e.from, t: e.to, i })).filter((e) => have.has(e.f) && have.has(e.t) && e.f !== e.t);
+  const out = Object.fromEntries(ids.map((id) => [id, []])); E.forEach((e) => out[e.f].push(e));
+  const st = {}, back = new Set();
+  const dfs = (u) => { st[u] = 1; out[u].forEach((e) => { if (st[e.t] === 1) back.add(e.i); else if (!st[e.t]) dfs(e.t); }); st[u] = 2; };
+  const hasIn = new Set(E.map((e) => e.t));
+  ids.filter((id) => !hasIn.has(id)).forEach((id) => { if (!st[id]) dfs(id); });
+  ids.forEach((id) => { if (!st[id]) dfs(id); });
+  const dag = E.filter((e) => !back.has(e.i));
+  const rank = Object.fromEntries(ids.map((id) => [id, 0]));
+  for (let k = 0; k < ids.length; k++) { let ch = false; dag.forEach((e) => { if (rank[e.t] < rank[e.f] + 1) { rank[e.t] = rank[e.f] + 1; ch = true; } }); if (!ch) break; }
+  const R = Math.max(0, ...Object.values(rank));
+  const cols = Array.from({ length: R + 1 }, () => []); ids.forEach((id) => cols[rank[id]].push(id));
+  const ord = {}; const reindex = () => cols.forEach((c) => c.forEach((id, i) => { ord[id] = i; })); reindex();
+  const sweep = (r, nbrs) => { const key = {}; cols[r].forEach((id) => { const v = nbrs(id).map((n) => ord[n]); key[id] = v.length ? v.reduce((a, b) => a + b, 0) / v.length : ord[id]; }); cols[r].sort((a, b) => key[a] - key[b]); reindex(); };
+  for (let it = 0; it < 4; it++) {
+    for (let r = 1; r <= R; r++) sweep(r, (id) => dag.filter((e) => e.t === id).map((e) => e.f));
+    for (let r = R - 1; r >= 0; r--) sweep(r, (id) => dag.filter((e) => e.f === id).map((e) => e.t));
+  }
+  const rows = Math.max(1, ...cols.map((c) => c.length));
+  const dir = opt.maxCols && R + 1 > opt.maxCols ? 'TB' : 'LR', g = opt.geom(dir), w = g.w;
+  const pos = {}; cols.forEach((c, r) => c.forEach((id, i) => { pos[id] = { x: r, y: i + (rows - c.length) / 2 }; }));
+  const via = {}; let topN = 0, botN = 0;
+  E.forEach((e) => {
+    const a = pos[e.f], b = pos[e.t], isBack = back.has(e.i);
+    if (!isBack && Math.abs(a.x - b.x) <= 1) return;
+    const top = (a.y + b.y) / 2 <= (rows - 1) / 2;
+    const lane = top ? -(g.l0 + g.ls * topN++) : rows - 1 + g.l0 + g.ls * botN++;
+    via[e.i] = isBack ? [[a.x + w / 2, lane], [b.x + w / 2, lane]] : [[a.x + (1 + w) / 2, lane], [b.x - (1 - w) / 2, lane]];
+  });
+  const shift = topN ? g.l0 + g.ls * (topN - 1) : 0;
+  if (shift) { Object.values(pos).forEach((p) => { p.y += shift; }); Object.values(via).forEach((v) => v.forEach((q) => { q[1] += shift; })); }
+  if (dir === 'TB') { Object.values(pos).forEach((p) => { [p.x, p.y] = [p.y, p.x]; }); Object.values(via).forEach((v) => v.forEach((q) => { [q[0], q[1]] = [q[1], q[0]]; })); }
+  return { pos, via, dir, g };
+}
+
+function edgeLabel(text, mx, my, col) {
+  const L = wrapN(text, 22, 3), lh = 12.5, h = L.length * lh + 6, w = Math.max(38, Math.max(...L.map((l) => l.length)) * 6.1 + 14), y0 = my - h / 2;
+  return `<rect class="elabel" x="${mx - w / 2}" y="${y0}" width="${w}" height="${h}" rx="6" fill="var(--panel)" stroke="${col}" stroke-opacity=".55"><title>${esc(text)}</title></rect><text x="${mx}" y="${y0 + 13}" text-anchor="middle" font-size="10.5">${L.map((l, i) => `<tspan x="${mx}" dy="${i ? lh : 0}">${esc(l)}</tspan>`).join('')}</text>`;
+}
+
+function map() {
+  const auto = true;
+  const geom = (dir) => (dir === 'TB' ? { GX: 330, GY: 150, w: 44 / 150, l0: 115 / 330, ls: 40 / 330 } : { GX: 330, GY: 110, w: 170 / 330, l0: 52 / 110, ls: 34 / 110 });
+  const ap = auto ? autoPos(D.participants.map((p) => p.id), D.edges || [], { maxCols: 4, geom }) : null;
+  const nodes = auto ? D.participants.map((p) => ({ ...p, x: ap.pos[p.id].x, y: ap.pos[p.id].y })) : D.participants.filter((p) => p.x !== undefined); if (!nodes.length) return '';
+  const W = 170, H = 44, GX = auto ? ap.g.GX : 280, GY = auto ? ap.g.GY : 110, M = 28;
+  const pos = {}; nodes.forEach((n) => { pos[n.id] = { x: M + n.x * GX, y: M + n.y * GY, n }; });
+  const viaOf = (e, i) => (auto && ap.via[i]) || e.via || [];
+  const allVia = (D.edges || []).flatMap((e, i) => viaOf(e, i));
+  const maxX = Math.max(...nodes.map((n) => n.x), ...allVia.map((v) => v[0])), maxY = Math.max(...nodes.map((n) => n.y), ...allVia.map((v) => v[1]));
+  const vw = M * 2 + maxX * GX + W, vh = M * 2 + maxY * GY + H;
+  const cen = (p) => ({ x: p.x + W / 2, y: p.y + H / 2 });
+  const cell = ([gx, gy]) => ({ x: M + gx * GX + W / 2, y: M + gy * GY + H / 2 });
+  const clip = (a, b) => { const dx = b.x - a.x, dy = b.y - a.y; const sx = dx ? (W / 2 + 6) / Math.abs(dx) : 1e9, sy = dy ? (H / 2 + 6) / Math.abs(dy) : 1e9; const t = Math.min(sx, sy); return { x: a.x + dx * t, y: a.y + dy * t }; };
+  let lines = '', labels = '';
+  const grp = {}; (D.edges || []).forEach((e, i) => { const k = [e.from, e.to].sort().join('|'); (grp[k] = grp[k] || []).push(i); });
+  (D.edges || []).forEach((e, ei) => {
+    const a = pos[e.from], b = pos[e.to]; if (!a || !b || e.from === e.to) return;
+    const via = viaOf(e, ei);
+    const raw = [cen(a), ...via.map(cell), cen(b)];
+    const g = grp[[e.from, e.to].sort().join('|')];
+    if (g.length > 1 && !via.length) {
+      const [p, q] = [e.from, e.to].sort().map((id) => cen(pos[id])), dx = q.x - p.x, dy = q.y - p.y, L = Math.hypot(dx, dy) || 1, off = (g.indexOf(ei) - (g.length - 1) / 2) * 16;
+      [0, raw.length - 1].forEach((k) => { raw[k] = { x: raw[k].x - (dy / L) * off, y: raw[k].y + (dx / L) * off }; });
+    }
+    const pts = raw.slice();
+    pts[0] = clip(raw[0], raw[1]); pts[pts.length - 1] = clip(raw[raw.length - 1], raw[raw.length - 2]);
+    const d = pts.map((q, i) => `${i ? 'L' : 'M'}${q.x},${q.y}`).join(' ');
+    lines += `<path d="${d}" fill="none" stroke="${pcol(e.proto)}" stroke-width="1.8" ${e.dashed ? 'stroke-dasharray="5 4"' : ''} marker-end="url(#ar-${PROTO[e.proto] ? e.proto : 'HTTP'})"/>`;
+    if (e.label) {
+      let best = 0, bi = 0; for (let i = 0; i < pts.length - 1; i++) { const l = Math.hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y); if (l > best) { best = l; bi = i; } }
+      labels += edgeLabel(e.label, (pts[bi].x + pts[bi + 1].x) / 2, (pts[bi].y + pts[bi + 1].y) / 2, pcol(e.proto));
+    }
+  });
+  let boxes = '';
+  nodes.forEach((n) => {
+    const p = pos[n.id], col = n.changed ? 'var(--warn)' : n.kind === 'store' ? 'var(--sql)' : n.kind === 'test' ? 'var(--test)' : n.kind === 'queue' ? 'var(--kafka)' : n.kind === 'external' ? 'var(--mute)' : 'var(--accent)';
+    boxes += `<g><rect class="nbox" x="${p.x}" y="${p.y}" width="${W}" height="${H}" rx="10" fill="${n.changed ? 'var(--warn-soft)' : 'var(--panel)'}" stroke="${col}" stroke-width="2"/>${nameText(p.x + W / 2, p.y + H / 2, n.name, 17, 13)}</g>`;
+  });
+  const defs = `<defs>${['HTTP', 'gRPC', 'Temporal', 'Kafka', 'SQL', 'webhook', 'browser', 'test'].map((k) => `<marker id="ar-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${pcol(k)}"/></marker>`).join('')}</defs>`;
+  const svg = `<svg viewBox="0 0 ${vw} ${vh}" style="${auto ? `width:100%;max-width:${Math.round(vw)}px;min-width:${Math.round(vw * 0.8)}px` : 'width:100%;min-width:760px'};height:auto;display:block;margin:0 auto">${defs}${lines}${boxes}${labels}</svg>`;
+  const used = [...new Set((D.edges || []).map((e) => e.proto).filter(Boolean))];
+  const kc = { test: 'var(--test)', external: 'var(--mute)', service: 'var(--accent)', store: 'var(--sql)', queue: 'var(--kafka)' };
+  const kn = { external: 'external system' };
+  const have = new Set(nodes.map((n) => n.kind || 'service'));
+  const kinds = Object.keys(kc).filter((k) => have.has(k)).map((k) => `<span style="border:2px solid ${kc[k]};border-radius:4px;padding:0 6px">${kn[k] || k}</span>`).join('');
+  return `<div class="svgwrap" style="padding:8px">${svg}</div><div class="legend">${used.map((k) => `<span><i style="border-color:${pcol(k)}"></i>${esc(k)}</span>`).join('')}</div><div class="legend">${kinds}</div>`;
+}
+
+function termsLegend() {
+  return D.legend && D.legend.length ? `<div class="legend terms">${D.legend.map((t) => `<span><b>${esc(t.term)}</b> = ${md(t.def)}</span>`).join('')}</div>` : '';
+}
+
+/* ---------- sequence ---------- */
+function sequence() {
+  const s = D.sequence; if (!s) return;
+  const names = {}; (D.participants || []).forEach((p) => { names[p.id] = p.name; });
+  const A = s.actors, COL = Math.max(150, Math.min(190, 1100 / A.length)), LEFT = 78, TOP = 52, ROW = 40;
+  const x = (id) => LEFT + COL * (A.indexOf(id) + 0.5);
+  const vw = LEFT + COL * A.length + 12, vh = TOP + s.steps.length * ROW + 24;
+  let svg = `<svg viewBox="0 0 ${vw} ${vh}" style="width:100%;min-width:980px;height:auto"><defs>${['call', 'async', 'signal', 'return'].map((k) => `<marker id="sq-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${k === 'signal' ? 'var(--temporal)' : k === 'async' ? 'var(--webhook)' : k === 'return' ? 'var(--mute)' : 'var(--accent)'}"/></marker>`).join('')}</defs>`;
+  (s.phases || []).forEach((ph, i) => {
+    const y1 = TOP + ph.from * ROW - 6, y2 = TOP + (ph.to + 1) * ROW - 6;
+    svg += `<rect x="0" y="${y1}" width="${vw}" height="${y2 - y1}" fill="${i % 2 ? 'transparent' : 'var(--code)'}" opacity=".55"/><text x="8" y="${y1 + 14}" font-size="10.5" font-weight="700" class="mute">${esc(ph.name.toUpperCase())}</text>`;
+  });
+  A.forEach((id) => {
+    svg += `<line class="life" x1="${x(id)}" y1="${TOP - 4}" x2="${x(id)}" y2="${vh - 14}"/><rect x="${x(id) - COL / 2 + 8}" y="6" width="${COL - 16}" height="36" rx="8" fill="var(--panel)" stroke="var(--accent)" stroke-width="1.6"/>${nameText(x(id), 24, names[id] || id, 17, 12)}`;
+  });
+  s.steps.forEach((st, i) => {
+    const y = TOP + i * ROW + 18, link = st.payload && P[st.payload];
+    const kind = st.kind || 'call', col = kind === 'signal' ? 'var(--temporal)' : kind === 'async' ? 'var(--webhook)' : kind === 'return' ? 'var(--mute)' : 'var(--accent)';
+    let inner = '';
+    if (kind === 'note') {
+      const xa = x(st.from), xb = st.to ? x(st.to) : xa, x1 = Math.min(xa, xb) - COL / 2 + 14, w = Math.abs(xb - xa) + COL - 28, lbl = esc(st.label);
+      inner = `<rect x="${x1}" y="${y - 14}" width="${w}" height="26" rx="6" fill="var(--warn-soft)" stroke="var(--warn)"/><text class="lbl" x="${x1 + w / 2}" y="${y + 3}" text-anchor="middle" font-size="11.5">${lbl}</text>`;
+    } else if (st.from === st.to) {
+      const xa = x(st.from);
+      inner = `<path d="M${xa},${y - 8} h34 v16 h-34" fill="none" stroke="${col}" stroke-width="1.7" marker-end="url(#sq-${kind})"/><text class="lbl" x="${xa + 42}" y="${y + 4}" font-size="11.5">${esc(st.label)}</text>`;
+    } else {
+      const xa = x(st.from), xb = x(st.to), dir = xb > xa ? 1 : -1, mid = (xa + xb) / 2;
+      inner = `<line x1="${xa}" y1="${y + 6}" x2="${xb - dir * 2}" y2="${y + 6}" stroke="${col}" stroke-width="1.8" ${kind === 'return' ? 'stroke-dasharray="5 4"' : kind === 'async' ? 'stroke-dasharray="2 3"' : ''} marker-end="url(#sq-${kind})"/><text class="lbl" x="${mid}" y="${y - 2}" text-anchor="middle" font-size="11.5">${esc(st.label)}</text>`;
+    }
+    svg += `<g class="step${link ? ' link' : ''}" ${link ? `onclick="openPayload('${st.payload}')"` : ''}><title>${esc((st.note || st.label) + (link ? ' (click: payload)' : ''))}</title>${link ? `<rect class="hit" x="0" y="${y - 15}" width="${vw}" height="${ROW - 2}"/>` : ''}<text x="8" y="${y + 9}" font-size="10.5" class="mute mono">${esc(st.t || String(i + 1))}</text>${inner}${link ? `<circle cx="${vw - 12}" cy="${y + 4}" r="3.5" fill="var(--accent)"/>` : ''}</g>`;
+  });
+  svg += '</svg>';
+  const legend = `<div class="legend"><span><i style="border-color:var(--accent)"></i>call</span><span><i style="border-color:var(--mute);border-top-style:dashed"></i>response</span><span><i style="border-color:var(--webhook);border-top-style:dotted"></i>async / webhook</span><span><i style="border-color:var(--temporal)"></i>signal</span><span>● an arrow with a dot opens its captured payload</span></div>`;
+  const withInfo = s.steps.some((x) => x.note || x.where);
+  const notes = withInfo ? `<div class="card" style="margin-top:12px"><table><tr><th>Step</th><th>What is going on</th><th>Where in the code</th></tr>${s.steps.map((st, i) => (st.note || st.where) ? `<tr><td>${i + 1}. ${md(st.label)}${st.t ? `<div class="mono" style="font-size:12px;color:var(--mute)">${esc(st.t)}</div>` : ''}</td><td>${md(st.note || '')}${payLinks(st)}</td><td>${whereLink(st.where)}</td></tr>` : '').join('')}</table></div>` : '';
+  sec('sequence', 'How the pieces talk, in order', s.lead || '', `<div class="svgwrap">${svg}</div>${legend}${termsLegend()}${notes}`);
+}
+
+/* ---------- payloads ---------- */
+function pp(root, rootPath, ind0, lines, ann) {
+  const lead = (key, a) => (key === null ? '' : `<span class="k">"${esc(key)}"</span>${a ? `<span class="b">${a.i}</span>` : ''}: `);
+  const walk = (v, key, comma, path, ind) => {
+    const pad = '  '.repeat(ind), a = ann[path];
+    const t = (txt) => `<span class="ln${a ? ' an' : ''}">${pad}${txt}${a && key === null ? `<span class="b">${a.i}</span>` : ''}</span>`;
+    if (v === null) { lines.push(t(`${lead(key, a)}<span class="nl">null</span>${comma}`)); return; }
+    if (Array.isArray(v)) {
+      if (!v.length) { lines.push(t(`${lead(key, a)}[]${comma}`)); return; }
+      lines.push(t(`${lead(key, a)}[`));
+      v.forEach((it, i) => walk(it, null, i < v.length - 1 ? ',' : '', `${path}[${i}]`, ind + 1));
+      lines.push(`<span class="ln">${pad}]${comma}</span>`); return;
+    }
+    if (typeof v === 'object') {
+      const ks = Object.keys(v);
+      if (!ks.length) { lines.push(t(`${lead(key, a)}{}${comma}`)); return; }
+      lines.push(t(`${lead(key, a)}{`));
+      ks.forEach((k, i) => walk(v[k], k, i < ks.length - 1 ? ',' : '', path ? `${path}.${k}` : k, ind + 1));
+      lines.push(`<span class="ln">${pad}}${comma}</span>`); return;
+    }
+    lines.push(t(`${lead(key, a)}<span class="${typeof v === 'string' ? 's' : 'nu'}">${esc(JSON.stringify(v))}</span>${comma}`));
+  };
+  walk(root, null, '', rootPath, ind0);
+}
+function bodyHtml(label, v, anns, prefix) {
+  if (v === null || v === undefined || v === '') return `<div class="body"><h5>${label}</h5><div class="empty">no body</div></div>`;
+  const ann = {}; anns.forEach((a) => { if (a.path.startsWith(prefix + '.')) ann[a.path.slice(prefix.length + 1)] = a; else if (a.path.startsWith(prefix + '[')) ann[a.path.slice(prefix.length)] = a; });
+  const lines = []; if (typeof v === 'string') lines.push(`<span class="ln">${esc(v)}</span>`); else pp(v, '', 0, lines, ann);
+  return `<div class="body"><h5>${label}</h5><pre class="json">${lines.join('')}</pre></div>`;
+}
+function payloads() {
+  const L = D.payloads; if (!L || !L.length) return;
+  const cards = L.map((p) => {
+    const data = P[p.id] || {};
+    const anns = (p.annotations || []).map((a, i) => ({ ...a, i: i + 1 }));
+    const proto = p.proto || 'HTTP';
+    return `<details class="card pay" id="pay-${esc(p.id)}"><summary>${pill(proto)}<span class="ttl">${esc(p.title)}</span><span class="mono" style="font-size:12.5px;color:var(--mute)">${esc(data.method || '')} ${esc(data.route || '')}</span><span class="when">${esc((data.when || '').slice(11, 23))}</span></summary>
+    <p class="summ">${md(p.summary || '')}</p><div class="bodies">${bodyHtml('Request', data.request, anns, 'request')}${bodyHtml('Response', data.response, anns, 'response')}</div>
+    ${anns.length ? `<ol class="ann">${anns.map((a) => `<li><span class="b">${a.i}</span><span><code>${esc(a.path)}</code> ${md(a.note)}</span></li>`).join('')}</ol>` : ''}</details>`;
+  }).join('');
+  sec('payloads', 'What the messages look like', 'Bodies captured from a real run. Secrets, personal data and file contents are masked. Numbered badges mark the fields worth understanding.', cards);
+}
+function openPayload(id) {
+  const e = document.getElementById('pay-' + id); if (!e) return;
+  e.open = true; e.scrollIntoView({ block: 'start' }); e.classList.add('hl'); setTimeout(() => e.classList.remove('hl'), 2200);
+}
+
+/* ---------- state ---------- */
+function state() {
+  const s = D.state; if (!s) return;
+  const rows = s.rows.map((r) => `<tr><td><code>${esc(r.col)}</code></td><td class="mono" style="font-size:12.3px;word-break:break-all">${esc(typeof r.value === 'string' ? r.value : JSON.stringify(r.value))}</td><td>${md(r.meaning || '')}</td></tr>`).join('');
+  sec('state', s.title || 'What gets stored', s.lead, `<div class="card"><table><tr><th>Field</th><th>Value</th><th>Meaning</th></tr>${rows}</table></div>`);
+}
+
+/* ---------- decisions ---------- */
+function decisions() {
+  if (!D.decisions) return;
+  const line = (k, v) => (v ? `<p style="margin:0 0 6px;font-size:14px"><b>${k}:</b> ${md(v)}</p>` : '');
+  sec('decisions', 'Decisions and tradeoffs', 'Where the behaviour is chosen, why, and what the choice costs.', `<div class="grid g2">${D.decisions.map((d) => `<div class="card"><h3 style="margin:0 0 6px;font-size:15px">${esc(d.title)}</h3><p style="margin:0 0 8px;color:var(--mute);font-size:13.5px">${md(d.where || '')}</p>${line('Chose', d.chose)}${line('Because', d.because)}${line('Costs', d.cost)}${line('Instead of', d.alternative)}${d.before ? `<div class="col before" style="margin-bottom:8px"><h4>Before</h4>${md(d.before)}</div>` : ''}${d.after ? `<div class="col after"><h4>After</h4>${md(d.after)}</div>` : ''}</div>`).join('')}</div>`);
+}
+
+/* ---------- ladder / takeaways / evidence ---------- */
+function ladder() {
+  if (!D.ladder) return;
+  sec('ladder', 'How it breaks (and how to tell)', 'How it fails and how each failure shows up. Use it as a triage checklist.', `<div class="card"><table><tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr>${D.ladder.map((l) => `<tr><td>${md(l.symptom)}</td><td>${md(l.cause)}</td><td>${md(l.fix)}</td></tr>`).join('')}</table></div>`);
+}
+function takeaways() {
+  if (!D.takeaways) return;
+  sec('takeaways', 'Takeaways', 'What to carry away: blast radius, invariants, trade-offs, what you would ask in review.', `<div class="grid g2">${D.takeaways.map((t) => `<div class="card"><h3 style="margin:0 0 6px;font-size:15px">${esc(t.title)}</h3><div style="color:var(--mute);font-size:14px">${md(t.body)}</div></div>`).join('')}</div>${D.questions ? `<div class="card" style="margin-top:12px"><b>Questions worth asking</b><ul style="margin:6px 0 0;padding-left:20px">${D.questions.map((q) => `<li>${md(q)}</li>`).join('')}</ul></div>` : ''}`);
+}
+function evidence() {
+  if (!D.evidence) return;
+  const note = '**observed** = I ran it and saw it · **code** = read from source · **reported** = stated in the MR or ticket · **inferred** = reasoned, not seen · **unverified** = not checked.';
+  sec('evidence', 'What is proven and what is not', note, `<div class="card"><table><tr><th>Claim</th><th>Status</th><th>Source</th></tr>${D.evidence.map((e) => `<tr><td>${md(e.claim)}</td><td><span class="ev ${esc(e.status)}">${esc(e.status)}</span></td><td>${md(e.source || '')}</td></tr>`).join('')}</table></div>`);
+}
+
+function wrapN(s, max, maxLines) {
+  const lines = []; let cur = '';
+  String(s).split(/\s+/).forEach((w) => { if (cur && (cur + ' ' + w).length > max) { lines.push(cur); cur = w; } else cur = cur ? cur + ' ' + w : w; });
+  if (cur) lines.push(cur);
+  if (lines.length > maxLines) { lines.length = maxLines; lines[maxLines - 1] = lines[maxLines - 1].replace(/.{0,2}$/, '…'); }
+  return lines;
+}
+
+function flowSvg(F, mid) {
+  const W = 190, H = 58, M = 24;
+  const geom = (dir) => (dir === 'TB' ? { GX: 310, GY: 140, w: 58 / 140, l0: 125 / 310, ls: 40 / 310 } : { GX: 310, GY: 100, w: 190 / 310, l0: 59 / 100, ls: 34 / 100 });
+  const ap = autoPos(F.nodes.map((n) => n.id), F.edges || [], { maxCols: 4, geom });
+  const GX = ap.g.GX, GY = ap.g.GY;
+  const nodes = F.nodes.map((n) => ({ ...n, ...ap.pos[n.id] }));
+  const pos = {}; nodes.forEach((n) => { pos[n.id] = { x: M + n.x * GX, y: M + n.y * GY, n }; });
+  const viaOf = (i) => ap.via[i] || [];
+  const allVia = (F.edges || []).flatMap((e, i) => viaOf(i));
+  const maxX = Math.max(...nodes.map((n) => n.x), ...allVia.map((v) => v[0])), maxY = Math.max(...nodes.map((n) => n.y), ...allVia.map((v) => v[1]));
+  const vw = M * 2 + maxX * GX + W, vh = M * 2 + maxY * GY + H;
+  const cen = (p) => ({ x: p.x + W / 2, y: p.y + H / 2 });
+  const cell = ([gx, gy]) => ({ x: M + gx * GX + W / 2, y: M + gy * GY + H / 2 });
+  const clip = (a, b) => { const dx = b.x - a.x, dy = b.y - a.y; const sx = dx ? (W / 2 + 6) / Math.abs(dx) : 1e9, sy = dy ? (H / 2 + 6) / Math.abs(dy) : 1e9; const t = Math.min(sx, sy); return { x: a.x + dx * t, y: a.y + dy * t }; };
+  let lines = '', labels = '';
+  (F.edges || []).forEach((e, i) => {
+    const a = pos[e.from], b = pos[e.to]; if (!a || !b || e.from === e.to) return;
+    const raw = [cen(a), ...viaOf(i).map(cell), cen(b)], pts = raw.slice();
+    pts[0] = clip(raw[0], raw[1]); pts[pts.length - 1] = clip(raw[raw.length - 1], raw[raw.length - 2]);
+    lines += `<path d="${pts.map((q, k) => `${k ? 'L' : 'M'}${q.x},${q.y}`).join(' ')}" fill="none" stroke="var(--mute)" stroke-width="1.7" ${e.dashed ? 'stroke-dasharray="5 4"' : ''} marker-end="url(#fl-${mid})"/>`;
+    if (e.label) {
+      let best = 0, bi = 0; for (let k = 0; k < pts.length - 1; k++) { const l = Math.hypot(pts[k + 1].x - pts[k].x, pts[k + 1].y - pts[k].y); if (l > best) { best = l; bi = k; } }
+      labels += edgeLabel(e.label, (pts[bi].x + pts[bi + 1].x) / 2, (pts[bi].y + pts[bi + 1].y) / 2, 'var(--mute)');
+    }
+  });
+  let boxes = '';
+  nodes.forEach((n) => {
+    const p = pos[n.id], k = n.kind || 'step';
+    const stroke = n.changed ? 'var(--warn)' : k === 'decision' ? 'var(--kafka)' : k === 'store' ? 'var(--sql)' : k === 'start' || k === 'end' ? 'var(--mute)' : 'var(--accent)', fill = n.changed ? 'var(--warn-soft)' : 'var(--panel)';
+    const shape = k === 'decision'
+      ? `<polygon class="nbox" points="${p.x + 18},${p.y} ${p.x + W - 18},${p.y} ${p.x + W},${p.y + H / 2} ${p.x + W - 18},${p.y + H} ${p.x + 18},${p.y + H} ${p.x},${p.y + H / 2}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`
+      : `<rect class="nbox" x="${p.x}" y="${p.y}" width="${W}" height="${H}" rx="${k === 'start' || k === 'end' ? H / 2 : 10}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
+    const L = wrapN(n.label, k === 'decision' ? 20 : 24, 3), lh = 14, y0 = p.y + H / 2 - ((L.length - 1) * lh) / 2 + 4;
+    const idx = numOf(F.nodes, n.id) - 1;
+    const badge = numbered(n) ? `<circle cx="${p.x + 4}" cy="${p.y + 4}" r="10" fill="var(--accent)"/><text x="${p.x + 4}" y="${p.y + 8}" text-anchor="middle" font-size="11" font-weight="700" style="fill:#fff">${idx + 1}</text>` : '';
+    boxes += `<g><title>${esc(n.note || n.label)}</title>${shape}${badge}<text x="${p.x + W / 2}" y="${y0}" text-anchor="middle" font-size="12" font-weight="600">${L.map((l, i) => `<tspan x="${p.x + W / 2}" dy="${i ? lh : 0}">${esc(l)}</tspan>`).join('')}</text></g>`;
+  });
+  const defs = `<defs><marker id="fl-${mid}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--mute)"/></marker></defs>`;
+  const chip = (c, t, r = 4, bg = 'transparent') => `<span style="border:2px solid ${c};background:${bg};border-radius:${r}px;padding:0 6px">${t}</span>`;
+  const kinds = new Set(F.nodes.map((n) => n.kind || 'step'));
+  const key = [F.nodes.some((n) => n.changed) ? chip('var(--warn)', 'changed in this change', 4, 'var(--warn-soft)') : '', kinds.has('decision') ? chip('var(--kafka)', 'decision') : '', kinds.has('step') || kinds.has('state') ? chip('var(--accent)', kinds.has('state') ? 'state' : 'step') : '', kinds.has('store') ? chip('var(--sql)', 'store') : '', kinds.has('start') || kinds.has('end') ? chip('var(--mute)', 'start / end', 99) : '', F.nodes.some(numbered) ? '<span><span class="nb" style="min-width:16px;height:16px;line-height:16px;font-size:10px">1</span> numbered steps are explained below</span>' : ''].join('');
+  return `<div class="svgwrap" style="padding:8px"><svg viewBox="0 0 ${vw} ${vh}" style="width:100%;max-width:${Math.round(vw)}px;min-width:${Math.round(vw * 0.8)}px;height:auto;display:block;margin:0 auto">${defs}${lines}${boxes}${labels}</svg></div><div class="legend">${key}</div>`;
+}
+
+const mutedS = 'font-size:12px;color:var(--mute)';
+function touchRow(r) {
+  const where = r.where ? (r.where.url ? `<a href="${esc(r.where.url)}" target="_blank" rel="noopener"><code>${esc(r.where.label)}</code></a>` : `<code>${esc(r.where.label)}</code>`) : '';
+  return `<tr><td>${esc(r.service || '')}</td><td>${pill(r.channel)}${r.direction ? ` <span style="${mutedS}">${esc(r.direction)}</span>` : ''}${r.target ? `<div class="mono" style="${mutedS}">${esc(r.target)}</div>` : ''}</td><td>${where}${r.text ? `<div class="mono" style="${mutedS};word-break:break-all">${esc(r.text)}${r.removed ? ' (removed)' : ''}</div>` : ''}</td><td>${md(r.note || '')}</td></tr>`;
+}
+const touchTable = (rows) => `<table class="tp"><colgroup><col style="width:15%"><col style="width:17%"><col style="width:38%"><col style="width:30%"></colgroup><tr><th>Service</th><th>Channel</th><th>Where in the code</th><th>What it does</th></tr>${rows.map(touchRow).join('')}</table>`;
+
+const whereLink = (w) => (w ? (w.url ? `<a href="${esc(w.url)}" target="_blank" rel="noopener"><code>${esc(w.label)}</code></a>` : `<code>${esc(w.label)}</code>`) : '');
+const numbered = (n) => !!(n.note || n.where);
+const numOf = (nodes, id) => { let k = 0; for (const n of nodes) { if (numbered(n)) k++; if (n.id === id) return numbered(n) ? k : 0; } return 0; };
+function walk(nodes) {
+  const rows = nodes.filter(numbered).map((n) => ({ n, i: numOf(nodes, n.id) - 1 }));
+  if (!rows.length) return '';
+  return `<div class="card wt"><table><tr><th></th><th>Step</th><th>What happens</th><th>Where in the code</th></tr>${rows.map(({ n, i }) => `<tr><td class="n"><span class="nb">${i + 1}</span></td><td>${esc(n.label)}</td><td>${md(n.note || '')}</td><td>${whereLink(n.where)}</td></tr>`).join('')}</table></div>`;
+}
+
+/* ---------- flow and lifecycle diagrams ---------- */
+function flowSec() {
+  const F = D.flow; if (!F) return;
+  sec('flow', F.title || 'How it works', F.lead, flowSvg(F, 'flow') + walk(F.nodes));
+}
+function statesSec() {
+  const S = D.states; if (!S) return;
+  sec('states', S.title || 'Lifecycle', S.lead, flowSvg({ ...S, nodes: S.nodes.map((n) => ({ kind: 'state', ...n })) }, 'states') + walk(S.nodes));
+}
+
+/* ---------- problem, code, after ---------- */
+function problem() {
+  const p = D.problem; if (!p) return;
+  let h = '';
+  if (p.keyPoints) h += `<div class="card"><ul style="margin:0;padding-left:20px">${p.keyPoints.map((x) => `<li>${md(x)}</li>`).join('')}</ul></div>`;
+  if (p.before || p.after) h += `<div class="cols" style="margin-top:12px"><div class="col before"><h4>Before</h4>${md(p.before || '')}</div><div class="col after"><h4>After</h4>${md(p.after || '')}</div></div>`;
+  sec('problem', D.meta.kind === 'flow' ? 'What it is for' : 'Problem and approach', p.lead, h);
+}
+function codeSec() {
+  const t = D.touchpoints || {};
+  let h = '';
+  if (t.rows && t.rows.length) h += `<div class="card">${touchTable(t.rows)}</div>`;
+  if (t.more && t.more.length) h += `<details class="card" style="margin-top:12px"><summary style="cursor:pointer">${t.more.length} more hit(s) found by the scan (not discussed above)</summary><div style="margin-top:8px">${touchTable(t.more)}</div></details>`;
+  sec('code', 'Where it happens in the code', t.lead, h);
+}
+function afterShip() {
+  const a = D.after || {}, sig = D.signalsAuto || []; if (!D.after && !sig.length) return;
+  let h = '';
+  if (a.watch && a.watch.length) h += `<div class="card"><table><tr><th>Signal</th><th>Why it matters</th></tr>${a.watch.map((w) => `<tr><td>${md(w.signal)}</td><td>${md(w.why || '')}</td></tr>`).join('')}</table></div>`;
+  if (sig.length) h += `<details class="card" style="margin-top:12px"><summary style="cursor:pointer">${sig.length} signal(s) found in the code (metrics, logs, errors, flags, timeouts)</summary><table style="margin-top:8px"><tr><th>Kind</th><th>Name</th><th>Where in the code</th></tr>${sig.map((s) => `<tr><td>${esc(s.kind)}</td><td><code>${esc(s.name || '')}</code></td><td>${whereLink(s.where)}</td></tr>`).join('')}</table></details>`;
+  sec('after', D.meta.kind === 'flow' ? 'What to watch' : 'After shipping', a.lead || 'What to look at to know it behaves.', h);
+}
+
+/* ---------- boot ---------- */
+header(); tldr(); problem(); participants(); flowSec(); sequence(); statesSec(); codeSec(); state(); decisions(); ladder(); takeaways(); payloads(); afterShip(); evidence();
+document.title = D.meta.title + ' · lens';
+$('#main').insertAdjacentHTML('beforeend', `<footer>Generated by the lens skill · ${esc(D.meta.date)} · the evidence table says what was read, run or inferred; nothing was sent anywhere.</footer>`);
+$('#navlinks').innerHTML = sections.map((s) => `<a href="#${s.id}">${esc(s.title)}</a>`).join('');
+const links = [...document.querySelectorAll('#navlinks a')];
+const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { links.forEach((l) => l.classList.toggle('on', l.getAttribute('href') === '#' + e.target.id)); } }), { rootMargin: '-20% 0px -70% 0px' });
+document.querySelectorAll('section.sec').forEach((s) => io.observe(s));
+const root = document.documentElement;
+root.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+$('#theme').onclick = () => { root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark'; };
+</script>
+</body>
+</html>
