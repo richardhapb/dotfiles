@@ -16,11 +16,10 @@ Output: `${LENS_ROOT:-~/lens}/<change|flow>/<slug>--<ref>/` with `index.html`, `
 | Question | Command (run inside the repo) |
 |---|---|
 | What does my branch change? | `python3 $S/scan.py` (branch vs the default branch, commits only) |
-| What does this GitLab MR do? | `python3 $S/scan.py --mr <url\|iid> [--project group/proj]` (needs `glab`) |
-| A GitHub PR | check the PR branch out and use the first form |
+| What does this MR or PR do? | `python3 $S/scan.py --review <url\|number> [--project group/proj]` (`--mr` and `--pr` are aliases) |
 | How does this code work? | `python3 $S/scan.py --paths <path> [<path> ...] --name "short name"` (reads files at HEAD) |
 
-`S=<this skill dir>/scripts`. Flags: `--budget N` (lines of source you will read, default 1500), `--max-hits N` (default 120), `--no-fetch`, `--base REF`, `--out DIR`, `--repo DIR`, `--services FILE`.
+`S=<this skill dir>/scripts`. A review is read with `glab` for a GitLab MR URL and `gh` for a GitHub PR URL; a bare number uses the `origin` remote to pick one. Flags: `--budget N` (lines of source you will read, default 1500), `--max-hits N` (default 120), `--no-fetch`, `--base REF`, `--out DIR`, `--repo DIR`, `--services FILE`.
 
 For "how does X work" pick the smallest paths that cover the flow (a service directory, a handler plus its job). A huge tree gives a thin page; the digest warns when it hits a cap.
 
@@ -32,7 +31,7 @@ For "how does X work" pick the smallest paths that cover the flow (a service dir
    {"services": {"Orders API": {"hosts": ["orders"], "env": ["ORDERS_URL"], "ports": [8080]}}}
    ```
    A target the map does not resolve is "unresolved". Never guess a service name.
-2. **Read** `hunks.txt` only (already budgeted: files with channel hits first, then the largest). Open another file only for one line of context a channel row or a caller needs. An MR description is `reported`, not verified. For your own branch, still base the page on `hunks.txt`, not memory, so it matches the commit it pins.
+2. **Read** `hunks.txt` only (already budgeted: files with channel hits first, then the largest). Open another file only for one line of context a channel row or a caller needs. An MR/PR description is `reported`, not verified. For your own branch, still base the page on `hunks.txt`, not memory, so it matches the commit it pins.
 3. **Choose the diagrams** (omit a key when the diagram would say nothing):
    - `flow`: always. The logic of the change or flow, 5 to 9 nodes, not the file layout.
    - `participants` + `edges` (the map): when more than one service, store or queue is involved.
@@ -102,7 +101,7 @@ Use only when the user can run the system and wants real messages on the page. Y
 
 ## Rules
 
-- No invented numbers, endpoints, topics, services, bodies or timings. Everything comes from the code, the scan, the MR text or a capture, or is marked `inferred`.
+- No invented numbers, endpoints, topics, services, bodies or timings. Everything comes from the code, the scan, the MR/PR description or a capture, or is marked `inferred`.
 - Code links are pinned to a commit sha (never a branch), and the page says which commit. Not pushed means no links yet; that is expected, rebuild after the push. Build never pushes.
 - Uncommitted work is not scanned (the digest warns). Commit first if it matters.
 - Mask secrets and personal data from anything you copy onto the page, and mark masked fields as masked.

@@ -96,6 +96,23 @@ class Patterns(unittest.TestCase):
         self.assertEqual(scan.match_signal("raise ReviewError, 'x'")[0][0], "error")
 
 
+class ReviewRef(unittest.TestCase):
+    def test_gitlab_github_and_bare_number(self):
+        self.assertEqual(scan.parse_review_ref("https://gl.example.com/grp/sub/proj/-/merge_requests/12", None), ("gl.example.com", "grp/sub/proj", "12", "gitlab"))
+        self.assertEqual(scan.parse_review_ref("https://github.com/own/repo/pull/7", None), ("github.com", "own/repo", "7", "github"))
+        self.assertEqual(scan.parse_review_ref("42", "github"), (None, None, "42", "github"))
+        self.assertIsNone(scan.parse_review_ref("not-a-ref", "github"))
+
+    def test_remote_kind_comes_from_the_host(self):
+        self.assertEqual(scan.parse_remote("git@github.com:own/repo.git")[2], "github")
+        self.assertEqual(scan.parse_remote("https://gl.example.com/grp/proj.git")[2], "gitlab")
+
+    def test_aliases_reach_the_same_option(self):
+        for flag in ("--review", "--mr", "--pr"):
+            p = subprocess.run([sys.executable, str(SCRIPTS / "scan.py"), flag, "nope"], capture_output=True, text=True)
+            self.assertIn("--review takes", p.stderr)
+
+
 class ServicesMap(unittest.TestCase):
     def make(self):
         p = Path(tempfile.mkdtemp()) / "services.json"
@@ -229,7 +246,7 @@ class Build(unittest.TestCase):
             ],
             "signals": [{"id": "S1", "kind": "metric", "name": "m", "file": "a b.rb", "line": 9, "text": "x"}],
             "files": [{"path": "big.rb", "category": "code", "read": False}],
-            "stats": {"files": 1, "added": 2, "removed": 1}, "warnings": ["w1"], "mr": None,
+            "stats": {"files": 1, "added": 2, "removed": 1}, "warnings": ["w1"], "review": None,
         }
 
     def data(self):

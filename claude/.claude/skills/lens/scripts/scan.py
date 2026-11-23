@@ -2,7 +2,7 @@
 """lens scanner: static facts about a change or a piece of code, so the model does not have to discover them.
 
   scan.py [--repo DIR] [--base REF] [--no-fetch]            the local branch vs the default branch
-  scan.py --mr URL_OR_IID [--project GROUP/PROJECT]         a GitLab MR (needs glab)
+  scan.py --review URL_OR_NUMBER [--project GROUP/PROJECT]  a GitLab MR (glab) or GitHub PR (gh); --mr and --pr are aliases
   scan.py --paths PATH [PATH ...] [--name NAME]             how existing code works: the files under PATH at HEAD
           [--out DIR] [--budget N] [--max-hits N] [--services FILE]
 
@@ -203,7 +203,7 @@ pat("blob", "rw", r"\b(Aws::S3|S3Client|ActiveStorage|Google::Cloud::Storage)\b|
 pat("webhook", "ref", r"webhook", flags=re.I)
 pat("webhook", "in", r"OpenSSL::HMAC|hmac\.New\(|createHmac|X-[A-Za-z-]*Signature", flags=re.I)
 # feature flags
-pat("flag", "read", r"\b(Split\.\w+|split_client|SplitClient|treatments?\(|getTreatments?\(|useSplit\w*|useTreatments?\b|splitio|Flipper\.(enabled\?|enable|disable)|FeatureFlag\w*|feature_flag\w*|feature_enabled\?|flag_enabled\?|LaunchDarkly|ld_client|variation\(|HarnessFeatureFlags?|Harness::\w+)", target=STR)
+pat("flag", "read", r"\b(Split\.\w+|split_client|SplitClient|treatments?\(|getTreatments?\(|useSplit\w*|useTreatments?\b|splitio|Flipper\.(enabled\?|enable|disable)|FeatureFlag\w*|feature_flag\w*|feature_enabled\?|flag_enabled\?|LaunchDarkly|ld_client|variation\()", target=STR)
 pat("flag", "def", r"^\s*(export\s+)?(const\s+|let\s+)?[A-Z][A-Z0-9_]{3,}\s*=?\s*$|^\s*(export\s+)?(const\s+|let\s+)?[A-Z][A-Z0-9_]{3,}\s*=\s*['\"]", target=STR, files=r"(?i)flags?[^/]*\.(ts|tsx|js|rb|go|py)$|(^|/)flags?/")
 
 SIGNALS = [
@@ -394,37 +394,55 @@ def paths_input(args):
     return repo, "\n".join(parts) + "\n", None, warnings
 
 
-def mr_input(args):
-    ref = args.mr
+def parse_review_ref(ref, remote_kind):
+    """-> (host, project, number, kind) from a GitLab MR URL, a GitHub PR URL, or a bare number (kind from the origin remote)."""
     m = re.match(r"https?://([^/]+)/(.+?)/-/merge_requests/(\d+)", ref)
-    env = dict(os.environ)
     if m:
-        host, project, iid = m.group(1), m.group(2), m.group(3)
-        env["GITLAB_HOST"] = host
-    elif ref.isdigit():
-        iid, project, host = ref, args.project, None
-        if not project:
-            remote = run(["git", "remote", "get-url", "origin"], cwd=args.repo or ".").strip()
-            host, project, _ = parse_remote(remote)
-            if not project:
-                die("cannot tell the project; pass --project GROUP/PROJECT or a full MR URL")
-    else:
-        die("--mr takes an MR URL or an iid")
-    if host is None:
-        remote = run(["git", "remote", "get-url", "origin"], cwd=args.repo or ".", check=False).strip()
-        host = parse_remote(remote)[0]
-    info = json.loads(run(["glab", "api", f"projects/{quote(project, safe='')}/merge_requests/{iid}"], env=env))
-    diff = run(["glab", "mr", "diff", iid, "--raw", "--color=never", "-R", project], env=env)
-    head = info.get("sha") or (info.get("diff_refs") or {}).get("head_sha") or ""
+        return m.group(1), m.group(2), m.group(3), "gitlab"
+    m = re.match(r"https?://([^/]+)/(.+?)/pull/(\d+)", ref)
+    if m:
+        return m.group(1), m.group(2), m.group(3), "github"
+    if ref.isdigit():
+        return None, None, ref, remote_kind
+    return None
+
+
+def review_input(args):
+    ref = args.review
+    remote = run(["git", "remote", "get-url", "origin"], cwd=args.repo or ".", check=False).strip()
+    r_host, r_project, r_kind = parse_remote(remote)
+    parsed = parse_review_ref(ref, r_kind)
+    if not parsed:
+        die("--review takes a GitLab MR URL, a GitHub PR URL or a number")
+    host, project, number, kind = parsed
+    host, project = host or r_host, project or args.project or r_project
+    if not project or not kind:
+        die("cannot tell the project; pass --project GROUP/PROJECT or a full URL")
+    env = dict(os.environ)
+    try:
+        if kind == "gitlab":
+            env["GITLAB_HOST"] = host or ""
+            info = json.loads(run(["glab", "api", f"projects/{quote(project, safe='')}/merge_requests/{number}"], env=env))
+            diff = run(["glab", "mr", "diff", number, "--raw", "--color=never", "-R", project], env=env)
+            head = info.get("sha") or (info.get("diff_refs") or {}).get("head_sha") or ""
+            base_sha, base, branch = (info.get("diff_refs") or {}).get("base_sha"), info.get("target_branch"), info.get("source_branch")
+            review = {"number": int(number), "label": f"MR !{number}", "url": info.get("web_url"), "title": info.get("title"),
+                      "description": (info.get("description") or "")[:1500]}
+        else:
+            fields = "number,title,body,url,headRefOid,baseRefName,headRefName"
+            info = json.loads(run(["gh", "pr", "view", number, "-R", f"{host}/{project}" if host != "github.com" else project, "--json", fields], env=env))
+            diff = run(["gh", "pr", "diff", number, "-R", f"{host}/{project}" if host != "github.com" else project, "--color=never"], env=env)
+            head, base_sha, base, branch = info.get("headRefOid") or "", None, info.get("baseRefName"), info.get("headRefName")
+            review = {"number": int(number), "label": f"PR #{number}", "url": info.get("url"), "title": info.get("title"),
+                      "description": (info.get("body") or "")[:1500]}
+    except FileNotFoundError as e:
+        die(f"{e.filename} is not installed: it is needed to read a {'MR' if kind == 'gitlab' else 'PR'}")
     repo = {"dir": None, "name": project.split("/")[-1], "remote": f"https://{host}/{project}", "host": host, "project": project,
-            "kind": "gitlab", "head_sha": head, "base_sha": (info.get("diff_refs") or {}).get("base_sha"), "base": info.get("target_branch"),
-            "branch": info.get("source_branch"), "pushed": True, "linkable": bool(head), "dirty": False}
-    # a local clone makes whole-file reads and caller search possible, but only if it already has the head commit
+            "kind": kind, "head_sha": head, "base_sha": base_sha, "base": base, "branch": branch, "pushed": True, "linkable": bool(head), "dirty": False}
     cand = Path(args.repo or ".").expanduser()
     if head and subprocess.run(["git", "cat-file", "-e", f"{head}^{{commit}}"], cwd=cand, capture_output=True).returncode == 0:
         repo["dir"] = run(["git", "rev-parse", "--show-toplevel"], cwd=cand).strip()
-    mr = {"iid": int(iid), "url": info.get("web_url"), "title": info.get("title"), "description": (info.get("description") or "")[:1500]}
-    return repo, diff, mr, []
+    return repo, diff, review, []
 
 
 class Source:
@@ -618,12 +636,12 @@ def budgeted_hunks(files, hits, budget):
 
 # ---------------------------------------------------------------- output
 
-def auto_dir(repo, mr, args):
+def auto_dir(repo, review, args):
     if args.paths:
         words = slugify(args.name or " ".join(Path(x).name for x in args.paths))
         return ROOT / "flow" / f"{'-'.join(words.split('-')[:6]) or 'flow'}--{repo['head_sha'][:7]}"
-    title = (mr or {}).get("title") or repo.get("branch") or "change"
-    ref = f"mr{mr['iid']}" if mr else slugify(repo.get("branch") or "local")
+    title = (review or {}).get("title") or repo.get("branch") or "change"
+    ref = f"review{review['number']}" if review else slugify(repo.get("branch") or "local")
     slug = "-".join(slugify(title).split("-")[:6]) or "change"
     return ROOT / "change" / f"{slug}--{ref}"
 
@@ -638,10 +656,10 @@ def digest(scan):
          f"service map: {scan['services_map'] or 'none (targets stay unresolved)'}"]
     for w in scan["warnings"]:
         L.append(f"warning: {w}")
-    if scan.get("mr"):
-        L.append(f"MR !{scan['mr']['iid']}: {scan['mr']['title']}")
-        if scan["mr"]["description"]:
-            L.append("MR description (reported, not verified): " + scan["mr"]["description"][:600].replace("\n", " "))
+    if scan.get("review"):
+        L.append(f"{scan['review']['label']}: {scan['review']['title']}")
+        if scan["review"]["description"]:
+            L.append("description (reported, not verified): " + scan["review"]["description"][:600].replace("\n", " "))
     L.append("\n## files  (R = in hunks.txt)")
     for f in scan["files"]:
         flag = "R" if f.get("read") else "-"
@@ -672,7 +690,7 @@ def main():
     ap.add_argument("--repo")
     ap.add_argument("--base")
     ap.add_argument("--no-fetch", action="store_true")
-    ap.add_argument("--mr")
+    ap.add_argument("--review", "--mr", "--pr", dest="review")
     ap.add_argument("--project")
     ap.add_argument("--budget", type=int, default=DEFAULT_BUDGET)
     ap.add_argument("--paths", nargs="+")
@@ -681,15 +699,15 @@ def main():
     ap.add_argument("--services")
     args = ap.parse_args()
     try:
-        repo, diff, mr, warnings = mr_input(args) if args.mr else paths_input(args) if args.paths else local_input(args)
+        repo, diff, review, warnings = review_input(args) if args.review else paths_input(args) if args.paths else local_input(args)
     except RuntimeError as e:
         die(str(e))
     files = parse_diff(diff)
     if not files:
         die("no changes against the base")
     source, services = Source(repo), Services(args.services, repo.get("dir"))
-    if repo.get("dir") is None and args.mr:
-        warnings.append("no local clone at the MR head: scanned the diff only (no whole-file hits, no callers)")
+    if repo.get("dir") is None and args.review:
+        warnings.append("no local clone at the head commit: scanned the diff only (no whole-file hits, no callers)")
     hits, signals, tests, callers, dropped = analyze(files, source, services, args.max_hits)
     if dropped:
         warnings.append(f"{dropped} more channel hit(s) were not listed (--max-hits {args.max_hits}): narrow the paths or raise it")
@@ -698,10 +716,10 @@ def main():
         f.setdefault("read", False)
         if f["category"] != "code" and not f.get("reason"):
             f["reason"] = {"noise": "generated or lock file", "doc": "docs", "test": "names only", "migration": "table names only"}.get(f["category"], "")
-    out = Path(args.out).expanduser() if args.out else auto_dir(repo, mr, args)
+    out = Path(args.out).expanduser() if args.out else auto_dir(repo, review, args)
     out.mkdir(parents=True, exist_ok=True)
     scan = {
-        "version": 1, "mode": "paths" if args.paths else "mr" if args.mr else "change", "dir": str(out), "repo": repo, "mr": mr, "warnings": warnings,
+        "version": 1, "mode": "paths" if args.paths else "review" if args.review else "change", "dir": str(out), "repo": repo, "review": review, "warnings": warnings,
         "services_map": services.path,
         "stats": {"files": len(files), "added": sum(f["added"] for f in files), "removed": sum(f["removed"] for f in files), "budget": args.budget, "used": used},
         "files": [{k: f[k] for k in ("path", "status", "added", "removed", "category", "read", "reason") if k in f} for f in files],

@@ -333,7 +333,7 @@ function takeaways() {
 }
 function evidence() {
   if (!D.evidence) return;
-  const note = '**observed** = I ran it and saw it · **code** = read from source · **reported** = stated in the MR or ticket · **inferred** = reasoned, not seen · **unverified** = not checked.';
+  const note = '**observed** = I ran it and saw it · **code** = read from source · **reported** = stated in the description or ticket · **inferred** = reasoned, not seen · **unverified** = not checked.';
   sec('evidence', 'What is proven and what is not', note, `<div class="card"><table><tr><th>Claim</th><th>Status</th><th>Source</th></tr>${D.evidence.map((e) => `<tr><td>${md(e.claim)}</td><td><span class="ev ${esc(e.status)}">${esc(e.status)}</span></td><td>${md(e.source || '')}</td></tr>`).join('')}</table></div>`);
 }
 

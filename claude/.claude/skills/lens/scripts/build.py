@@ -103,13 +103,13 @@ def expand(data, scan):
     not_read = [f for f in scan["files"] if f["category"] == "code" and not f.get("read")]
     if not_read:
         ev.append({"claim": f"Not read: {len(not_read)} code file(s) over the read budget ({', '.join(f['path'] for f in not_read[:4])}{' ...' if len(not_read) > 4 else ''}).", "status": "unverified", "source": "scan.json"})
-    if scan.get("mr") and scan["mr"].get("description"):
-        ev.append({"claim": "The motivation comes from the MR description.", "status": "reported", "source": "MR description"})
+    if scan.get("review") and scan["review"].get("description"):
+        ev.append({"claim": "The motivation comes from the description.", "status": "reported", "source": scan["review"]["label"] + " description"})
     for w in scan.get("warnings") or []:
         ev.append({"claim": w, "status": "unverified", "source": "scan"})
     data["evidence"] = ev
-    if scan.get("mr") and scan["mr"].get("url") and not data["meta"].get("refs"):
-        data["meta"]["refs"] = [{"label": f"MR !{scan['mr']['iid']}", "url": scan["mr"]["url"]}]
+    if scan.get("review") and scan["review"].get("url") and not data["meta"].get("refs"):
+        data["meta"]["refs"] = [{"label": scan["review"]["label"], "url": scan["review"]["url"]}]
     return problems
 
 
